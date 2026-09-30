@@ -173,6 +173,23 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .gen-out dd { margin: 0; }
 .gen-title { font-weight: 700; font-size: 1.02rem; margin-bottom: 6px; }
 
+/* Codex */
+.cx-head { margin-bottom: 12px; }
+.cx-bar { display: flex; flex-direction: column; gap: 10px; }
+.cx-tools { display: flex; gap: 8px; max-width: 640px; }
+.cx-count { opacity: .65; font-size: .72rem; margin-left: 2px; }
+.cx-grid { columns: 380px; column-gap: 16px; }
+.cx-card { break-inside: avoid; margin-bottom: 16px; display: block; }
+.cx-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.cx-trads { display: flex; gap: 4px; flex-wrap: wrap; }
+.cx-name { font-size: 1.15rem; margin: 8px 0 2px; }
+.cx-src { font-size: .8rem; color: var(--muted); font-style: italic; margin-bottom: 10px; }
+.cx-dl { margin: 0 0 12px; display: grid; gap: 2px; font-size: .9rem; }
+.cx-dl dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin-top: 8px; }
+.cx-dl dd { margin: 0; }
+.cx-drawn-wrap { max-width: 760px; margin-bottom: 20px; }
+.cx-drawn { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold), var(--shadow); }
+
 /* Welcome */
 .welcome { max-width: 640px; margin: 8vh auto; text-align: center; }
 .welcome h1 { font-size: 2.2rem; color: var(--accent); }
@@ -202,6 +219,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
   .saved { display: none; }
   .brand-text { display: none; }
   .stats { grid-template-columns: repeat(2, 1fr); }
+  .cx-grid { columns: 1; }
+  .cx-tools { flex-direction: column; }
   .form { grid-template-columns: 1fr; }
   .field.half { grid-column: 1 / -1; }
   .mon-row { grid-template-columns: 1fr 76px 60px auto; }
@@ -236,6 +255,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
+<script src="codex.js"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -412,7 +432,7 @@ const TYPES = {
     },
   },
 };
-const SECTION_ORDER = ['overview', 'pcs', 'npcs', 'locations', 'factions', 'quests', 'items', 'sessions', 'encounters', 'tools'];
+const SECTION_ORDER = ['overview', 'pcs', 'npcs', 'locations', 'factions', 'quests', 'items', 'sessions', 'encounters', 'codex', 'tools'];
 
 /* =========================================================
    Encounter math (D&D 5e DMG)
@@ -477,7 +497,7 @@ function addCampaign(c) { ensure(c); db.campaigns.push(c); db.currentId = c.id; 
 /* =========================================================
    Routing  (#/section/id)
    ========================================================= */
-let view = { section: 'overview', sel: null, filter: '', tag: null, q: '' };
+let view = { section: 'overview', sel: null, filter: '', tag: null, q: '', cx: { cat: 'premise', trad: '', q: '', drawn: null } };
 function go(section, id) { location.hash = `#/${section}${id ? '/' + id : ''}`; }
 function parseHash() {
   const [, section = 'overview', id = null] = location.hash.split('/');
@@ -507,7 +527,8 @@ function renderNav() {
   const typeLinks = g => Object.entries(TYPES).filter(([, T]) => T.group === g).map(([k, T]) => link(k, T.icon, T.label, c.entities[k].length)).join('');
   setHTML($('#sidebar'), link('overview', '🗺️', 'Overview')
     + '<div class="nav-group">World & story</div>' + typeLinks('world')
-    + '<div class="nav-group">At the table</div>' + typeLinks('table') + link('tools', '🎲', 'Dice & generators'));
+    + '<div class="nav-group">At the table</div>' + typeLinks('table')
+    + '<div class="nav-group">Inspiration</div>' + link('codex', '📚', 'Mythic Codex') + link('tools', '🎲', 'Dice & generators'));
 }
 
 function renderMain() {
@@ -515,6 +536,7 @@ function renderMain() {
   if (!c) return renderWelcome();
   if (view.section === 'overview') renderOverview(c);
   else if (view.section === 'tools') renderTools(c);
+  else if (view.section === 'codex') renderCodex(c);
   else if (view.section === 'search') renderSearch(c);
   else renderSection(c, view.section);
 }
@@ -829,15 +851,6 @@ const T_ = {
   want: ['to pay off a crushing debt', 'revenge on whoever ruined their family', 'to be remembered after they die', 'to protect a younger sibling', 'to find a legendary lost relic', 'to escape their past', 'respect from the local nobility', 'a cure for a mysterious illness', 'power, by any means', 'a quiet life, finally', 'to prove a rival wrong', 'the truth behind a friend’s disappearance'],
   secret: ['is secretly a spy for a rival faction', 'killed someone years ago and was never caught', 'is the heir to a fallen noble house', 'owes a favor to a devil', 'knows the location of a hidden dungeon', 'is a shapechanger in disguise', 'has been stealing from their employer', 'is being blackmailed', 'worships a forbidden god', 'is dying and has told no one', 'once abandoned their adventuring party to die', 'has a twin nobody knows about'],
   quirk: ['speaks in the third person', 'hums constantly', 'collects teeth', 'answers questions with questions', 'quotes proverbs, often incorrectly', 'never makes eye contact', 'laughs at inappropriate moments', 'rolls a coin across their knuckles', 'whispers everything', 'is painfully formal', 'calls everyone “friend”', 'chews on a pipe they never light'],
-  arche: ['a lich seeking to outlive the gods', 'a charismatic cult leader', 'a usurping regent', 'a dragon hoarding more than gold', 'a hag who trades in memories', 'a merchant prince with a mercenary army', 'a fallen paladin', 'a fey lord bored with mortals', 'an aberration dreaming beneath the city', 'a necromancer grieving a lost love'],
-  vgoal: ['to open a gate to another plane', 'to seize the throne', 'to resurrect someone who should stay dead', 'to become a god', 'to erase a bloodline', 'to plunge the land into eternal winter', 'to control the only source of magic in the land', 'to avenge an ancient betrayal'],
-  vmeth: ['through a network of informants', 'by corrupting the local clergy', 'with an army of the undead', 'through bargains and debts', 'by manipulating the heroes themselves', 'with forbidden rituals at each new moon'],
-  vweak: ['cannot enter holy ground', 'is bound by an ancient oath', 'loves someone who could betray them', 'hid their source of power in plain sight', 'has lieutenants who secretly despise them', 'fears being forgotten more than death'],
-  epithet: ['the Pale', 'the Unbroken', 'of the Ashen Veil', 'the Whisperer', 'the Crowned Wolf', 'the Hollow', 'the Last'],
-  patron: ['A desperate farmer', 'A hooded stranger', 'The local temple', 'A dying knight', 'A guild of merchants', 'A child with a strange map', 'The town council', 'An eccentric wizard', 'A grieving widow', 'A ghost'],
-  task: ['to recover a stolen relic from', 'to investigate disappearances near', 'to escort a mysterious cargo to', 'to clear out the creatures infesting', 'to deliver a sealed letter to', 'to rescue a kidnapped noble from', 'to find out what is poisoning the wells near', 'to negotiate a truce with the folk of'],
-  place: ['the flooded mines', 'the ruined abbey on the hill', 'the Whispering Woods', 'an abandoned lighthouse', 'the old dwarven road', 'a sunken temple', 'the border fortress', 'the sewers beneath the city', 'a village that appears only at night', 'the tomb of a forgotten king'],
-  twist: ['But the patron is lying about why.', 'But a rival adventuring party wants the same thing.', 'But the “monsters” are only defending their home.', 'But the job is a trap set by an old enemy.', 'But what they seek is alive — and doesn’t want to be found.', 'But the local lord forbids anyone from going there.', 'But it must be done before the next full moon.', 'But the reward is cursed.'],
   tadj: ['Prancing', 'Drunken', 'Gilded', 'Rusty', 'Laughing', 'Sleeping', 'Crooked', 'Salty', 'Wandering', 'Silver', 'One-Eyed', 'Howling'],
   tnoun: ['Griffon', 'Tankard', 'Dragon', 'Mermaid', 'Goat', 'Lantern', 'Boar', 'Wyvern', 'Owl', 'Anchor', 'Stag', 'Kraken'],
   tfeat: ['The owner never seems to age.', 'A bard plays the same song every night, and no one knows why.', 'There is a locked cellar door nobody talks about.', 'It is the unofficial headquarters of the thieves’ guild.', 'The notice board overflows with bounties.', 'The house ale has a faint magical shimmer.'],
@@ -850,9 +863,6 @@ const T_ = {
   iof: ['Whispers', 'the Tides', 'Embers', 'the Hollow Moon', 'Second Chances', 'the Stag', 'Silent Steps', 'Clarity', 'the Deep', 'Warding'],
   ipow: ['glows faintly when enemies are within 60 feet', 'lets the bearer cast misty step once per day', 'allows speaking with animals for 1 hour, once per day', 'grants advantage on checks to detect lies', 'always points toward the nearest fresh water', 'can store one spell of 3rd level or lower', 'makes the bearer immune to being frightened, but unable to sleep', 'whispers useful (and sometimes useless) advice'],
   iquirk: ['is always warm to the touch', 'hums when near gold', 'smells of lavender', 'sometimes speaks in its creator’s voice', 'feels heavier when its owner lies'],
-  threat: ['An ancient seal beneath the capital is cracking', 'The sun has not risen in thirteen days', 'A plague of undeath spreads from the northern marshes', 'The last dragon has awoken, furious and grieving', 'Two kingdoms march toward a war engineered by a hidden hand', 'A god has been murdered', 'The Feywild is bleeding into the mortal world', 'A floating city is falling from the sky'],
-  stakes: ['only a forgotten prophecy explains how to stop it', 'the only people who believe it are outcasts and criminals', 'every faction wants to exploit it rather than stop it', 'its cause is tied to one of the heroes’ pasts', 'the heroes may have caused it by accident'],
-  start: ['as prisoners on a ship bound for a penal colony', 'as guests at a wedding that goes terribly wrong', 'as newly hired caravan guards', 'in a village on the edge of the wilds', 'in the aftermath of a disaster that levelled their town', 'as the only witnesses to a murder'],
   comp: ['A sudden storm forces the party to take shelter somewhere unfamiliar.', 'An old enemy arrives with a proposition.', 'A trusted NPC is revealed to be a traitor.', 'The party’s gear is stolen in the night.', 'A rival group reaches the goal first.', 'A bystander is caught in the crossfire.', 'The bridge, road or tunnel ahead collapses.', 'A message arrives: someone the party cares about is in danger.', 'The authorities mistake the party for criminals.', 'A creature follows the party, watching but never attacking.'],
 };
 const GENS = {
@@ -860,18 +870,6 @@ const GENS = {
     const race = pick(RACES), name = nameFor(race), role = pick(T_.occ), look = pick(T_.look), pers = pick(T_.pers), want = pick(T_.want), secret = pick(T_.secret), quirk = pick(T_.quirk);
     return { title: name, rows: [['Who', `${race} ${role}`], ['Look', look], ['Manner', `${pers}; ${quirk}`], ['Wants', want], ['Secret', secret]],
       save: { type: 'npcs', data: { name, race, role: cap(role), appearance: cap(look) + '.', personality: `${cap(pers)}. ${cap(quirk)}.`, motivation: cap(want) + '.', secret: cap(secret) + '.', attitude: 'Neutral', status: 'Alive' } } };
-  } },
-  villain: { title: 'Villain', icon: '💀', make() {
-    const race = pick(RACES), name = `${nameFor(race).split(' ')[0]} ${pick(T_.epithet)}`, a = pick(T_.arche), g = pick(T_.vgoal), m = pick(T_.vmeth), w = pick(T_.vweak);
-    return { title: name, rows: [['Is', a], ['Wants', g], ['Methods', m], ['Weakness', w]],
-      save: { type: 'npcs', data: { name, role: cap(a), motivation: `${cap(g)}, ${m}.`, secret: `Weakness: ${w}.`, attitude: 'Hostile', status: 'Alive', tags: ['villain'] } } };
-  } },
-  hook: { title: 'Plot hook', icon: '📜', make() {
-    const p = pick(T_.patron), t = pick(T_.task), pl = pick(T_.place), tw = pick(T_.twist);
-    const hook = `${p} asks the party ${t} ${pl}.`;
-    const title = cap(pl.replace(/^(the|an|a) /, ''));
-    return { title, text: `${hook} ${tw}`,
-      save: { type: 'quests', data: { name: title, hook, complications: tw, status: 'Idea', kind: 'Side', giver: p.replace(/^(A|An|The) /, '') } } };
   } },
   tavern: { title: 'Tavern', icon: '🍺', make() {
     const name = `The ${pick(T_.tadj)} ${pick(T_.tnoun)}`, f = pick(T_.tfeat), r = pick(T_.rumor);
@@ -887,10 +885,6 @@ const GENS = {
     const name = `${pick(T_.iobj)} of ${pick(T_.iof)}`, pow = pick(T_.ipow), q = pick(T_.iquirk), rarity = pick(['Common', 'Uncommon', 'Uncommon', 'Rare', 'Rare', 'Very Rare']);
     return { title: name, rows: [['Rarity', rarity], ['Power', `It ${pow}.`], ['Quirk', `It ${q}.`]],
       save: { type: 'items', data: { name, rarity, description: `It ${pow}. It ${q}.`, kind: 'Wondrous item' } } };
-  } },
-  premise: { title: 'Campaign premise', icon: '✦', make() {
-    const text = `${pick(T_.threat)}, and ${pick(T_.stakes)}. The heroes begin ${pick(T_.start)}.`;
-    return { title: 'Premise', text, save: { type: 'pitch', data: text } };
   } },
   complication: { title: 'Complication', icon: '⚡', make() { return { title: 'Complication', text: pick(T_.comp) }; } },
 };
@@ -918,10 +912,101 @@ function renderTools() {
         <h3>${g.icon} ${g.title}</h3>
         <div class="gen-out" id="gen-${k}">${genHTML(k)}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-gen="${k}">Generate</button>
-        ${k === 'complication' ? '' : `<button class="btn small" data-gensave="${k}" ${genResults[k] ? '' : 'disabled'}>${k === 'premise' ? 'Use as campaign pitch' : 'Save to campaign'}</button>`}</div>
-      </div>`).join('')}</div></div>
+        ${k === 'complication' ? '' : `<button class="btn small" data-gensave="${k}" ${genResults[k] ? '' : 'disabled'}>Save to campaign</button>`}</div>
+      </div>`).join('')}
+      <div class="card"><h3>📚 Draw from the Mythic Codex</h3>
+        <p class="blurb" style="margin:8px 0 10px">Hand-written ideas from the world’s epics and philosophers.</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(CX.categories).map(([k, cat]) => `<button class="btn small" data-act="cxDraw" data-cat="${k}">${cat.icon} ${cat.one}</button>`).join('')}</div>
+      </div></div></div>
   </div>`;
   renderDice();
+}
+
+/* =========================================================
+   Mythic Codex
+   ========================================================= */
+const CX = window.CODEX || { traditions: {}, categories: {}, entries: [] };
+const cxRecent = [];
+function cxFiltered(cat, trad, q = '') {
+  q = q.trim().toLowerCase();
+  return CX.entries.filter(e => (!cat || e.c === cat) && (!trad || e.t.includes(trad))
+    && (!q || Object.values(e).join(' ').toLowerCase().includes(q)));
+}
+// Random pick that avoids repeating anything drawn recently.
+function drawCodex(cat, trad = '') {
+  const pool = cxFiltered(cat, trad);
+  if (!pool.length) return null;
+  const fresh = pool.filter(e => !cxRecent.includes(e));
+  const e = pick(fresh.length ? fresh : pool);
+  cxRecent.push(e); if (cxRecent.length > Math.min(12, pool.length - 1)) cxRecent.shift();
+  return e;
+}
+function cxCard(e, drawn) {
+  const cat = CX.categories[e.c], i = CX.entries.indexOf(e);
+  const mons = (e.monsters || []).map(m => `${m.count}× ${m.name} (CR ${m.cr})`).join(', ');
+  return `<article class="card cx-card ${drawn ? 'cx-drawn' : ''}">
+    <div class="cx-top"><span class="kicker">${cat.icon} ${cat.one}</span>
+      <span class="cx-trads">${e.t.map(t => `<span class="badge tone-gold" title="${esc(CX.traditions[t].label)}">${CX.traditions[t].icon} ${esc(CX.traditions[t].label)}</span>`).join('')}</span></div>
+    <h3 class="cx-name">${esc(e.name)}</h3>
+    <div class="cx-src">${esc(e.src)}</div>
+    <dl class="cx-dl">${cat.fields.filter(([k]) => e[k]).map(([k, l]) => `<dt>${l}</dt><dd>${esc(e[k])}</dd>`).join('')}
+      ${mons ? `<dt>Encounter</dt><dd>${esc(mons)}</dd>` : ''}</dl>
+    <div class="cx-actions"><button class="btn small primary" data-act="cxSave" data-i="${i}">${e.c === 'premise' ? 'Use for this campaign' : `Add to ${CX_TARGET[e.c]}`}</button></div>
+  </article>`;
+}
+const CX_TARGET = { premise: 'Overview', journey: 'Quests', villain: 'NPCs', monster: 'Encounters', god: 'NPCs', sage: 'NPCs', dilemma: 'Encounters', riddle: 'Encounters', hook: 'Quests', relic: 'Items' };
+function renderCodex() {
+  const x = view.cx, counts = {};
+  cxFiltered('', x.trad).forEach(e => counts[e.c] = (counts[e.c] || 0) + 1);
+  const cat = CX.categories[x.cat];
+  main.innerHTML = `<div class="cx-head">
+      <div><h1>📚 Mythic Codex</h1>
+        <p class="blurb" style="max-width:760px">Campaign material drawn from the Mahabharata, the Shahnameh, Gilgamesh, the Odyssey, the Norse sagas, Buddhist and Taoist thought, and Western philosophy. Every entry names its source. Several of these traditions are living religions, so their gods and teachers appear here with respect.</p></div>
+    </div>
+    <div class="cx-bar">
+      <div class="tagbar">${Object.entries(CX.categories).map(([k, c]) => `<button class="chip ${x.cat === k ? 'on' : ''}" data-act="cxCat" data-cat="${k}">${c.icon} ${c.label} <span class="cx-count">${counts[k] || 0}</span></button>`).join('')}</div>
+      <div class="tagbar">${Object.entries(CX.traditions).map(([k, t]) => `<button class="chip ${x.trad === k ? 'on' : ''}" data-act="cxTrad" data-trad="${k}">${t.icon} ${t.label}</button>`).join('')}</div>
+      <div class="cx-tools"><input type="search" class="input" id="cxSearch" placeholder="Search the codex…" value="${esc(x.q)}">
+        <button class="btn primary" data-act="cxDraw">🎲 Draw a random ${cat.one.toLowerCase()}</button></div>
+    </div>
+    <p class="blurb" style="margin:14px 0">${cat.blurb}</p>
+    <div id="cxDrawn"></div>
+    <div class="cx-grid" id="cxCards"></div>`;
+  renderCodexCards();
+}
+function renderCodexCards() {
+  const x = view.cx, drawn = x.drawn != null ? CX.entries[x.drawn] : null;
+  $('#cxDrawn').innerHTML = drawn ? `<div class="cx-drawn-wrap"><div class="kicker" style="margin-bottom:8px">🎲 Drawn for you</div>${cxCard(drawn, true)}</div>` : '';
+  const list = cxFiltered(x.cat, x.trad, x.q).filter(e => e !== drawn);
+  $('#cxCards').innerHTML = list.length ? list.map(e => cxCard(e)).join('') : (drawn ? '' : '<div class="empty">Nothing matches. Try another tradition or clear the search.</div>');
+}
+function applyPremise(c, e) {
+  const o = c.overview;
+  Object.assign(o, { pitch: e.pitch, themes: e.themes, tone: e.tone, villain: e.villain, villainGoal: e.villainGoal });
+  o.notes = [`Central question: ${e.question}`, `Arc: ${e.acts}`, `Inspired by: ${e.src}`, o.notes].filter(Boolean).join('\n\n');
+  touch(c);
+}
+function saveCodex(c, e) {
+  const tags = [...e.t];
+  const src = `Source: ${e.src}`;
+  let type, data;
+  switch (e.c) {
+    case 'premise':
+      if ((c.overview.pitch || '').trim() && !confirm(`Use “${e.name}” as this campaign’s premise? It replaces the pitch, themes, tone and villain (your notes are kept).`)) return;
+      applyPremise(c, e); toast(`“${e.name}” is now your campaign premise`); return go('overview');
+    case 'journey': type = 'quests'; data = { kind: 'Personal', status: 'Idea', hook: e.trigger, objectives: e.trial, complications: e.paths, reward: e.mark, notes: `${e.thinker}: ${e.idea}\n\n${src}` }; break;
+    case 'villain': type = 'npcs'; data = { role: e.role, attitude: 'Hostile', status: 'Alive', motivation: e.worldview, personality: `First sign: ${e.tell}`, secret: e.flaw, notes: `What they get right: ${e.truth}\n\nRedemption: ${e.redemption}\n\n${src}`, tags: [...tags, 'villain'] }; break;
+    case 'monster': type = 'encounters'; data = { kind: 'Combat', monsters: structuredClone(e.monsters || []), setup: e.lair, tactics: e.tactics, notes: `${e.lore}\n\nWhat it embodies: ${e.meaning}\n\n5e stats: ${e.stats}\n\nAnother way: ${e.mercy}\n\n${src}` }; break;
+    case 'god': type = 'npcs'; data = { role: `Deity: ${e.domain}`, attitude: 'Neutral', status: 'Alive', motivation: e.wants, personality: `Omen: ${e.omen}`, secret: `Price: ${e.price}`, notes: `Boon: ${e.boon}\n\nCleric domains: ${e.domains}\n\n${src}`, tags: [...tags, 'god'] }; break;
+    case 'sage': type = 'npcs'; data = { role: e.role, attitude: 'Friendly', status: 'Alive', personality: `Teaching: ${e.teaching}`, motivation: `Test: ${e.test}`, secret: e.flaw, notes: `Gift: ${e.gift}\n\n${src}`, tags: [...tags, 'mentor'] }; break;
+    case 'dilemma': type = 'encounters'; data = { kind: 'Social', monsters: [], setup: e.situation, tactics: `Stakes: ${e.stakes}`, notes: `Lenses: ${e.lenses}\n\nOutcomes: ${e.outcomes}\n\n${src}` }; break;
+    case 'riddle': type = 'encounters'; data = { kind: 'Trap / Puzzle', monsters: [], setup: `${e.setup}\n\nThe question: ${e.riddle}`, tactics: `Answers: ${e.answers}`, notes: `Outcome: ${e.outcome}\n\n${src}` }; break;
+    case 'hook': type = 'quests'; data = { kind: 'Main', status: 'Idea', hook: e.hook, objectives: `The truth: ${e.truth}`, complications: e.twist, reward: e.reward, notes: src }; break;
+    case 'relic': type = 'items'; data = { rarity: e.rarity, kind: e.kind || 'Wondrous item', attune: !!e.attune, description: e.power, notes: `${e.lore}\n\nPrice: ${e.price}\n\n${src}` }; break;
+  }
+  data.name = e.name; data.tags ||= tags;
+  const made = createEntity(type, data);
+  renderNav(); toast(`Added “${made.name}” to ${TYPES[type].label}`);
 }
 
 /* =========================================================
@@ -988,11 +1073,7 @@ document.addEventListener('click', ev => {
   }
   if (t.dataset.gensave) {
     const r = genResults[t.dataset.gensave]; if (!r?.save) return;
-    if (r.save.type === 'pitch') {
-      if (c.overview.pitch && !confirm('Replace your current campaign pitch?')) return;
-      c.overview.pitch = r.save.data; touch(c); toast('Pitch saved to your overview'); return;
-    }
-    const e = createEntity(r.save.type, structuredClone(r.save.data));
+      const e = createEntity(r.save.type, structuredClone(r.save.data));
     renderNav(); toast(`Saved “${e.name}” to ${TYPES[r.save.type].label}`);
     return;
   }
@@ -1034,10 +1115,20 @@ document.addEventListener('click', ev => {
     case 'delMonster': { const e = currentEnt(); e.monsters.splice(+t.dataset.i, 1); touch(c); renderEditor(c, 'encounters', e); return renderList(c, 'encounters'); }
     case 'stats': return rollStats();
     case 'inspire': {
-      const text = GENS.premise.make().text;
-      if (c.overview.pitch?.trim() && !confirm(`Replace your pitch with this idea?\n\n${text}`)) return;
-      c.overview.pitch = text; touch(c); return renderOverview(c);
+      const e = drawCodex('premise');
+      if (!confirm(`${e.name}\n\n${e.pitch}\n\nCentral question: ${e.question}\n\nUse this premise for your campaign? It fills in the pitch, themes, tone and villain (your notes are kept).`)) return;
+      applyPremise(c, e); return renderOverview(c);
     }
+    case 'cxCat': view.cx.cat = t.dataset.cat; view.cx.drawn = null; return renderCodex(c);
+    case 'cxTrad': view.cx.trad = view.cx.trad === t.dataset.trad ? '' : t.dataset.trad; view.cx.drawn = null; return renderCodex(c);
+    case 'cxDraw': {
+      if (t.dataset.cat) view.cx.cat = t.dataset.cat;
+      const e = drawCodex(view.cx.cat, view.cx.trad);
+      view.cx.drawn = e ? CX.entries.indexOf(e) : null;
+      if (view.section !== 'codex') return go('codex');
+      renderCodex(c); return window.scrollTo(0, 0);
+    }
+    case 'cxSave': return saveCodex(c, CX.entries[+t.dataset.i]);
     case 'mkVillain': { const e = createEntity('npcs', { name: c.overview.villain.trim(), attitude: 'Hostile', motivation: c.overview.villainGoal || '', tags: ['villain'] }); return go('npcs', e.id); }
   }
 });
@@ -1045,6 +1136,7 @@ document.addEventListener('click', ev => {
 main.addEventListener('input', ev => {
   const t = ev.target, c = camp(); if (!c) return;
   if (t.id === 'listSearch') { view.filter = t.value; return renderList(c, view.section); }
+  if (t.id === 'cxSearch') { view.cx.q = t.value; view.cx.drawn = null; return renderCodexCards(); }
   if (t.tagName === 'TEXTAREA') autosize(t);
   if (t.dataset.ov) {
     if (t.dataset.ov === '__name') { c.name = t.value; renderTop(); }
