@@ -172,6 +172,18 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .gen-out dt { color: var(--muted); font-size: .8rem; font-weight: 600; }
 .gen-out dd { margin: 0; }
 .gen-title { font-weight: 700; font-size: 1.02rem; margin-bottom: 6px; }
+.gen-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.gen-head h2 { margin: 0; }
+.gen-culture { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--muted); }
+.gen-culture select { width: auto; }
+.gen-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gen-card-head h3 { margin: 0; }
+.gen-opt { width: auto; padding: 4px 8px; font-size: .85rem; }
+.gen-wide { grid-column: 1 / -1; }
+.gen-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.gen-sec { margin-top: 10px; }
+.gen-sec ol { margin: 4px 0 0; padding-left: 20px; }
+.gen-sec li { margin: 3px 0; }
 
 /* Codex */
 .cx-head { margin-bottom: 12px; }
@@ -256,6 +268,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
 <script src="codex.js"></script>
+<script src="generators.js"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -828,71 +841,27 @@ function rollStats() {
 /* =========================================================
    Generators
    ========================================================= */
-const NAMES = {
-  Human: [['Aldric', 'Brenna', 'Cedric', 'Dara', 'Edwin', 'Freya', 'Gideon', 'Hilda', 'Isolde', 'Jasper', 'Kaelen', 'Liora', 'Marek', 'Nessa', 'Osric', 'Perrin', 'Rowena', 'Silas', 'Tamsin', 'Ulric', 'Vera', 'Wystan', 'Yara', 'Corin'], ['Ashford', 'Blackwood', 'Crane', 'Dunmore', 'Fairwind', 'Greaves', 'Hollow', 'Ironside', 'Kettle', 'Lark', 'Marsh', 'Pike', 'Redmane', 'Stone', 'Thorne', 'Vale']],
-  Dwarf: [['Borin', 'Dagna', 'Eldrek', 'Gunnhild', 'Harbek', 'Kathra', 'Morgran', 'Rurik', 'Torga', 'Vistra', 'Brottor', 'Helja'], ['Ironfist', 'Stonebeard', 'Deepdelver', 'Coppervein', 'Anvilborn', 'Flintheart', 'Granitehand']],
-  Elf: [['Aelar', 'Caelynn', 'Erevan', 'Ielenia', 'Lianthorn', 'Naivara', 'Quarion', 'Sariel', 'Thamior', 'Valanthe', 'Mialee', 'Theren'], ['Amakiir', 'Galanodel', 'Liadon', 'Moonwhisper', 'Siannodel', 'Starbloom', 'Nightbreeze']],
-  Halfling: [['Cade', 'Lidda', 'Merric', 'Seraphina', 'Roscoe', 'Verna', 'Pip', 'Bree', 'Milo', 'Poppy'], ['Brushgather', 'Goodbarrel', 'Tealeaf', 'Underbough', 'Tosscobble', 'Greenbottle']],
-  Gnome: [['Alston', 'Bimpnottin', 'Dimble', 'Ellyjobell', 'Fonkin', 'Orla', 'Zook', 'Nissa', 'Wrenn'], ['Beren', 'Daergel', 'Garrick', 'Nackle', 'Turen', 'Sprocketwhistle']],
-  'Half-Orc': [['Dench', 'Gell', 'Holg', 'Krusk', 'Baggi', 'Emen', 'Ovak', 'Shautha', 'Yevelda', 'Thokk'], ['the Unbowed', 'Skullsplitter', 'of the Red Tusk', 'Ironjaw', 'the Quiet']],
-  Tiefling: [['Akmenos', 'Damakos', 'Kallista', 'Mordai', 'Orianna', 'Rieta', 'Hope', 'Torment', 'Ash', 'Sorrow', 'Ember', 'Vesper'], ['', '', 'Vane', 'Kaziel', 'Nightshade']],
-  Dragonborn: [['Arjhan', 'Donaar', 'Kriv', 'Medrash', 'Sora', 'Harann', 'Thava', 'Biri', 'Nala'], ['Clethtinthiallor', 'Kerrhylon', 'Myastan', 'Yarjerit', 'Delmirev']],
-};
-const RACES = ['Human', 'Human', 'Human', 'Dwarf', 'Elf', 'Halfling', 'Gnome', 'Half-Orc', 'Tiefling', 'Dragonborn', 'Half-Elf'];
-function nameFor(race) {
-  if (race === 'Half-Elf') return `${pick(pick([NAMES.Human, NAMES.Elf])[0])} ${pick(NAMES.Human[1])}`;
-  const [f, l] = NAMES[race] || NAMES.Human;
-  return `${pick(f)} ${pick(l)}`.trim();
+const GEN = window.GENERATORS || { cultures: { classic: { label: 'Classic fantasy' } }, gens: {} };
+const GENS = GEN.gens;
+const genResults = {}, genOpts = {};
+let genCulture = 'any';
+function genContext(key) {
+  const c = camp(), pcs = c ? c.entities.pcs : [];
+  const level = pcs.length ? Math.max(1, Math.min(20, Math.round(pcs.reduce((s, p) => s + (+p.level || 1), 0) / pcs.length))) : 1;
+  const cultures = Object.keys(GEN.cultures);
+  return { culture: genCulture === 'any' ? pick(cultures) : genCulture, level, opt: genOpts[key], codex: CX };
 }
-const T_ = {
-  occ: ['blacksmith', 'innkeeper', 'priest of a minor god', 'disgraced knight', 'smuggler', 'herbalist', 'guard captain', 'traveling merchant', 'scholar', 'grave keeper', 'fortune teller', 'bounty hunter', 'noble’s steward', 'ferryman', 'retired adventurer', 'alchemist', 'bard', 'fence for the thieves’ guild', 'cartographer', 'hedge witch'],
-  look: ['a jagged scar across one cheek', 'ink-stained fingers', 'an eyepatch embroidered with gold thread', 'braided silver hair', 'a nervous twitch', 'immaculate, expensive clothing', 'two missing fingers on the left hand', 'freckles and a gap-toothed grin', 'a towering, broad-shouldered frame', 'a tiny, wiry build', 'the faint smell of smoke', 'tattoos of old sailing charts', 'gloves they never take off', 'a cane carved like a serpent'],
-  pers: ['suspicious of strangers', 'relentlessly cheerful', 'blunt to the point of rudeness', 'a compulsive liar', 'fiercely loyal', 'greedy but honest about it', 'melancholy and poetic', 'nervous and eager to please', 'arrogant', 'kind but world-weary', 'curious about everything', 'quick to anger, quicker to forgive'],
-  want: ['to pay off a crushing debt', 'revenge on whoever ruined their family', 'to be remembered after they die', 'to protect a younger sibling', 'to find a legendary lost relic', 'to escape their past', 'respect from the local nobility', 'a cure for a mysterious illness', 'power, by any means', 'a quiet life, finally', 'to prove a rival wrong', 'the truth behind a friend’s disappearance'],
-  secret: ['is secretly a spy for a rival faction', 'killed someone years ago and was never caught', 'is the heir to a fallen noble house', 'owes a favor to a devil', 'knows the location of a hidden dungeon', 'is a shapechanger in disguise', 'has been stealing from their employer', 'is being blackmailed', 'worships a forbidden god', 'is dying and has told no one', 'once abandoned their adventuring party to die', 'has a twin nobody knows about'],
-  quirk: ['speaks in the third person', 'hums constantly', 'collects teeth', 'answers questions with questions', 'quotes proverbs, often incorrectly', 'never makes eye contact', 'laughs at inappropriate moments', 'rolls a coin across their knuckles', 'whispers everything', 'is painfully formal', 'calls everyone “friend”', 'chews on a pipe they never light'],
-  tadj: ['Prancing', 'Drunken', 'Gilded', 'Rusty', 'Laughing', 'Sleeping', 'Crooked', 'Salty', 'Wandering', 'Silver', 'One-Eyed', 'Howling'],
-  tnoun: ['Griffon', 'Tankard', 'Dragon', 'Mermaid', 'Goat', 'Lantern', 'Boar', 'Wyvern', 'Owl', 'Anchor', 'Stag', 'Kraken'],
-  tfeat: ['The owner never seems to age.', 'A bard plays the same song every night, and no one knows why.', 'There is a locked cellar door nobody talks about.', 'It is the unofficial headquarters of the thieves’ guild.', 'The notice board overflows with bounties.', 'The house ale has a faint magical shimmer.'],
-  rumor: ['Someone saw lights in the old tower again.', 'The baron’s daughter ran off with a sellsword.', 'Wolves took three sheep last night, and they walked on two legs.', 'A dragon was spotted over the mountains.', 'The priest has been buying an awful lot of lamp oil.', 'There is gold in the river caves, if you can get past what lives there.'],
-  spre: ['Oak', 'Raven', 'Mill', 'Stone', 'Ash', 'Wolf', 'Cold', 'Brook', 'Thorn', 'Salt', 'Iron', 'Frost'],
-  ssuf: ['ford', 'haven', 'hollow', 'reach', 'wick', 'moor', 'gate', 'bury', 'fall', 'stead', 'mere', 'crest'],
-  known: ['its enormous annual fair', 'a miraculous healing spring', 'the finest horses in the realm', 'a haunted bell tower', 'its silver mines', 'a shrine to a forgotten saint', 'exotic spices from overseas', 'an ancient ring of standing stones'],
-  problem: ['wolves have grown bold and clever', 'the mayor has vanished', 'everyone shares the same nightmare', 'the river has turned red', 'bandits control the only road', 'strange lights hover in the hills each night', 'a dragon has been sighted', 'the dead refuse to stay buried'],
-  iobj: ['Ring', 'Cloak', 'Dagger', 'Amulet', 'Lantern', 'Boots', 'Shield', 'Staff', 'Mirror', 'Compass', 'Gauntlets', 'Quill'],
-  iof: ['Whispers', 'the Tides', 'Embers', 'the Hollow Moon', 'Second Chances', 'the Stag', 'Silent Steps', 'Clarity', 'the Deep', 'Warding'],
-  ipow: ['glows faintly when enemies are within 60 feet', 'lets the bearer cast misty step once per day', 'allows speaking with animals for 1 hour, once per day', 'grants advantage on checks to detect lies', 'always points toward the nearest fresh water', 'can store one spell of 3rd level or lower', 'makes the bearer immune to being frightened, but unable to sleep', 'whispers useful (and sometimes useless) advice'],
-  iquirk: ['is always warm to the touch', 'hums when near gold', 'smells of lavender', 'sometimes speaks in its creator’s voice', 'feels heavier when its owner lies'],
-  comp: ['A sudden storm forces the party to take shelter somewhere unfamiliar.', 'An old enemy arrives with a proposition.', 'A trusted NPC is revealed to be a traitor.', 'The party’s gear is stolen in the night.', 'A rival group reaches the goal first.', 'A bystander is caught in the crossfire.', 'The bridge, road or tunnel ahead collapses.', 'A message arrives: someone the party cares about is in danger.', 'The authorities mistake the party for criminals.', 'A creature follows the party, watching but never attacking.'],
-};
-const GENS = {
-  npc: { title: 'NPC', icon: '🎭', make() {
-    const race = pick(RACES), name = nameFor(race), role = pick(T_.occ), look = pick(T_.look), pers = pick(T_.pers), want = pick(T_.want), secret = pick(T_.secret), quirk = pick(T_.quirk);
-    return { title: name, rows: [['Who', `${race} ${role}`], ['Look', look], ['Manner', `${pers}; ${quirk}`], ['Wants', want], ['Secret', secret]],
-      save: { type: 'npcs', data: { name, race, role: cap(role), appearance: cap(look) + '.', personality: `${cap(pers)}. ${cap(quirk)}.`, motivation: cap(want) + '.', secret: cap(secret) + '.', attitude: 'Neutral', status: 'Alive' } } };
-  } },
-  tavern: { title: 'Tavern', icon: '🍺', make() {
-    const name = `The ${pick(T_.tadj)} ${pick(T_.tnoun)}`, f = pick(T_.tfeat), r = pick(T_.rumor);
-    return { title: name, rows: [['Notable', f], ['Rumor', r]],
-      save: { type: 'locations', data: { name, kind: 'Tavern / Shop', features: f, secrets: `Rumor overheard: ${r}` } } };
-  } },
-  settlement: { title: 'Settlement', icon: '🏘️', make() {
-    const name = pick(T_.spre) + pick(T_.ssuf), size = pick(['Village', 'Village', 'Town', 'Town', 'City']), k = pick(T_.known), p = pick(T_.problem);
-    return { title: name, rows: [['Size', size], ['Known for', k], ['Trouble', `Lately, ${p}.`]],
-      save: { type: 'locations', data: { name, kind: size, description: `A ${size.toLowerCase()} known for ${k}.`, secrets: `Lately, ${p}.` } } };
-  } },
-  item: { title: 'Magic item', icon: '💎', make() {
-    const name = `${pick(T_.iobj)} of ${pick(T_.iof)}`, pow = pick(T_.ipow), q = pick(T_.iquirk), rarity = pick(['Common', 'Uncommon', 'Uncommon', 'Rare', 'Rare', 'Very Rare']);
-    return { title: name, rows: [['Rarity', rarity], ['Power', `It ${pow}.`], ['Quirk', `It ${q}.`]],
-      save: { type: 'items', data: { name, rarity, description: `It ${pow}. It ${q}.`, kind: 'Wondrous item' } } };
-  } },
-  complication: { title: 'Complication', icon: '⚡', make() { return { title: 'Complication', text: pick(T_.comp) }; } },
-};
-const genResults = {};
 function genHTML(key) {
   const r = genResults[key];
-  if (!r) return '<p class="blurb">Press generate for an idea.</p>';
-  return `<div class="gen-title">${esc(r.title)}</div>${r.text ? `<p style="margin:0">${esc(r.text)}</p>` : ''}${r.rows ? `<dl>${r.rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}`;
+  if (!r) return `<p class="blurb">${GENS[key].blurb ? esc(GENS[key].blurb) : 'Press generate for an idea.'}</p>`;
+  return `<div class="gen-title">${esc(r.title)}</div>${r.text ? `<p style="margin:0">${esc(r.text)}</p>` : ''}
+    ${r.rows ? `<dl>${r.rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
+    ${(r.sections || []).map(([h, list]) => `<div class="gen-sec"><div class="kicker">${esc(h)}</div><ol>${list.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>`).join('')}`;
+}
+function genButtons(key) {
+  const r = genResults[key];
+  return `<button class="btn small primary" data-gen="${key}">${r ? 'Generate again' : 'Generate'}</button>
+    ${(r?.saves || []).map((sv, i) => `<button class="btn small" data-gensave="${key}" data-si="${i}" ${sv.note ? `title="Creates: ${esc(sv.note)}"` : ''}>${esc(sv.label)}</button>`).join('')}`;
 }
 
 /* ---------- Tools page ---------- */
@@ -907,12 +876,17 @@ function renderTools() {
       <div class="roll-out" id="rollOut"><div class="roll-detail">Pick a die or type an expression.</div></div>
       <ul class="history" id="history"></ul>
     </div>
-    <div><h2 style="margin-bottom:12px">✦ Generators</h2>
-      <div class="gens">${Object.entries(GENS).map(([k, g]) => `<div class="card">
-        <h3>${g.icon} ${g.title}</h3>
+    <div><div class="gen-head"><h2>✦ Generators</h2>
+        <label class="gen-culture">Culture <select id="genCulture" aria-label="Culture for names and places">
+          <option value="any" ${genCulture === 'any' ? 'selected' : ''}>Any (mix them)</option>
+          ${Object.entries(GEN.cultures).map(([k, c]) => `<option value="${k}" ${genCulture === k ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}
+        </select></label></div>
+      <p class="blurb" style="margin:-4px 0 12px">The culture sets names and places, and which Codex traditions adventures draw from. Adventures and adventurers use your party’s average level.</p>
+      <div class="gens">${Object.entries(GENS).map(([k, g]) => `<div class="card ${g.wide ? 'gen-wide' : ''}">
+        <div class="gen-card-head"><h3>${g.icon} ${g.title}</h3>
+          ${g.opts ? `<select class="gen-opt" data-genopt="${k}" aria-label="${esc(g.opts.label)}">${g.opts.choices.map(([v, l]) => `<option value="${v}" ${genOpts[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>` : ''}</div>
         <div class="gen-out" id="gen-${k}">${genHTML(k)}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-gen="${k}">Generate</button>
-        ${k === 'complication' ? '' : `<button class="btn small" data-gensave="${k}" ${genResults[k] ? '' : 'disabled'}>Save to campaign</button>`}</div>
+        <div class="gen-btns" id="genb-${k}">${genButtons(k)}</div>
       </div>`).join('')}
       <div class="card"><h3>📚 Draw from the Mythic Codex</h3>
         <p class="blurb" style="margin:8px 0 10px">Hand-written ideas from the world’s epics and philosophers.</p>
@@ -1066,15 +1040,17 @@ document.addEventListener('click', ev => {
   const c = camp();
   if (t.dataset.roll) return doRoll(t.dataset.roll);
   if (t.dataset.gen) {
-    const k = t.dataset.gen; genResults[k] = GENS[k].make();
+    const k = t.dataset.gen; genResults[k] = GENS[k].make(genContext(k));
     $(`#gen-${k}`).innerHTML = genHTML(k);
-    const sb = document.querySelector(`[data-gensave="${k}"]`); if (sb) sb.disabled = false;
+    $(`#genb-${k}`).innerHTML = genButtons(k);
     return;
   }
   if (t.dataset.gensave) {
-    const r = genResults[t.dataset.gensave]; if (!r?.save) return;
-      const e = createEntity(r.save.type, structuredClone(r.save.data));
-    renderNav(); toast(`Saved “${e.name}” to ${TYPES[r.save.type].label}`);
+    const sv = genResults[t.dataset.gensave]?.saves?.[+t.dataset.si]; if (!sv || !c) return;
+    const made = sv.items.map(it => ({ type: it.type, e: createEntity(it.type, structuredClone(it.data)) }));
+    renderNav();
+    toast(made.length === 1 ? `Added “${made[0].e.name}” to ${TYPES[made[0].type].label}` : `Added ${made.length} records: ${[...new Set(made.map(m => TYPES[m.type].label))].join(', ')}`);
+    t.disabled = true; t.textContent = '✓ Saved';
     return;
   }
   if (t.dataset.menu) {
@@ -1158,6 +1134,8 @@ main.addEventListener('input', ev => {
 });
 main.addEventListener('change', ev => {
   const t = ev.target, c = camp(); if (!c) return;
+  if (t.id === 'genCulture') { genCulture = t.value; return; }
+  if (t.dataset.genopt) { genOpts[t.dataset.genopt] = t.value; return; }
   if (t.dataset.act === 'createMention' && t.value) {
     const type = t.value, name = t.dataset.name;
     const e = createEntity(type, { name });
