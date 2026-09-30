@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campaign Forge</title>
+<meta name="description" content="Plan your D&D campaign: party, NPCs, locations, factions, quests, sessions, encounters, dice and generators.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3ead7; --surface: #fffaf0; --surface-2: #f8f0de; --line: #dccdae;
+  --ink: #2b2118; --muted: #74624e; --accent: #8b1e1e; --accent-ink: #fff8ee;
+  --gold: #a07a24; --ok: #2f6b3a; --warn: #a0661a; --bad: #9b2226; --info: #2c5a7a;
+  --shadow: 0 1px 2px rgba(60,40,10,.08), 0 6px 20px rgba(60,40,10,.06);
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15121a; --surface: #201c26; --surface-2: #29242f; --line: #3a3342;
+    --ink: #ece4d4; --muted: #a89d8c; --accent: #d4574a; --accent-ink: #1a1014;
+    --gold: #d9b35b; --ok: #6fbf7e; --warn: #e0a24d; --bad: #e0685f; --info: #6fa8d6;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15121a; --surface: #201c26; --surface-2: #29242f; --line: #3a3342;
+  --ink: #ece4d4; --muted: #a89d8c; --accent: #d4574a; --accent-ink: #1a1014;
+  --gold: #d9b35b; --ok: #6fbf7e; --warn: #e0a24d; --bad: #e0685f; --info: #6fa8d6;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
+h1, h2, h3, .brand { font-family: Cinzel, Georgia, serif; letter-spacing: .02em; }
+h1 { font-size: 1.5rem; margin: 0; }
+h2 { font-size: 1.15rem; margin: 0 0 .6rem; }
+h3 { font-size: 1rem; margin: 0 0 .4rem; }
+a { color: var(--accent); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+
+/* Top bar */
+.topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; font-size: 1.15rem; color: var(--accent); white-space: nowrap; text-decoration: none; }
+.topbar select { max-width: 220px; }
+.top-search { flex: 1; min-width: 0; max-width: 360px; margin-left: auto; }
+.saved { font-size: .8rem; color: var(--muted); min-width: 52px; text-align: right; }
+.menu { position: relative; }
+.menu summary { list-style: none; cursor: pointer; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px; min-width: 220px; display: flex; flex-direction: column; z-index: 40; }
+.menu-list button { text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.menu-list button:hover { background: var(--surface-2); }
+.menu-list hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
+
+/* Controls */
+.input, select, textarea, input[type="text"], input[type="number"], input[type="date"], input[type="search"] { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 64px; line-height: 1.45; }
+input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 0; border-color: var(--accent); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 8px; cursor: pointer; text-decoration: none; color: var(--ink); white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--bad); }
+.btn.small { padding: 4px 9px; font-size: .85rem; }
+.icon-btn { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 57px); }
+.sidebar { border-right: 1px solid var(--line); padding: 14px 10px; background: var(--surface-2); position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto; }
+.nav-group { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 10px 4px; }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--ink); text-decoration: none; }
+.nav a:hover { background: var(--surface); }
+.nav a.active { background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); font-weight: 600; }
+.nav .count { margin-left: auto; font-size: .78rem; color: var(--muted); }
+.main { padding: 20px; min-width: 0; }
+.menu-toggle { display: none; }
+
+/* Lists and editor */
+.split { display: grid; grid-template-columns: minmax(250px, 320px) 1fr; gap: 20px; align-items: start; }
+.listpane { position: sticky; top: 77px; max-height: calc(100vh - 97px); display: flex; flex-direction: column; gap: 10px; }
+.list-head { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.blurb { color: var(--muted); margin: 0; font-size: .9rem; }
+.items { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.item { display: block; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; color: var(--ink); }
+.item:hover { border-color: var(--accent); }
+.item.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.item-title { font-weight: 600; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.item-sub { display: block; font-size: .83rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { font-size: .7rem; font-weight: 600; padding: 2px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.tone-ok { color: var(--ok); } .tone-warn { color: var(--warn); } .tone-bad { color: var(--bad); } .tone-info { color: var(--info); } .tone-muted { color: var(--muted); } .tone-gold { color: var(--gold); }
+.tagbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: .78rem; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+.chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.empty { color: var(--muted); text-align: center; padding: 30px 12px; border: 1px dashed var(--line); border-radius: var(--radius); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+.editor-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.kicker { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.spacer { flex: 1; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; grid-column: 1 / -1; min-width: 0; }
+.field.half { grid-column: span 1; }
+.field > span { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.field .help { font-weight: 400; }
+.title-input { font-family: Cinzel, Georgia, serif; font-size: 1.35rem !important; font-weight: 700; }
+.check { display: flex; align-items: center; gap: 8px; font-size: .9rem; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.hint { font-size: .82rem; color: var(--muted); margin-top: 14px; }
+.hint code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.links { margin-top: 14px; display: grid; gap: 10px; }
+.links .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.links .row > b { font-size: .8rem; color: var(--muted); margin-right: 4px; }
+.link-chip { font-size: .82rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); text-decoration: none; color: var(--ink); }
+.link-chip:hover { border-color: var(--accent); }
+.link-chip.missing { border-style: dashed; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.link-chip.missing select { padding: 0 4px; font-size: .78rem; width: auto; border-radius: 6px; }
+
+/* Encounter */
+.mon-list { display: flex; flex-direction: column; gap: 6px; }
+.mon-row { display: grid; grid-template-columns: 1fr 90px 70px auto; gap: 6px; }
+.party-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
+.party-row label.inline { display: flex; align-items: center; gap: 6px; font-size: .9rem; }
+.party-row label.inline input { width: 70px; }
+.diff { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface-2); }
+.diff-label { font-family: Cinzel, Georgia, serif; font-weight: 700; font-size: 1.2rem; }
+.bar { position: relative; height: 10px; background: var(--line); border-radius: 999px; margin: 10px 0 4px; overflow: hidden; }
+.bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: currentColor; }
+.bar-tick { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--surface); }
+.thresh { display: flex; justify-content: space-between; font-size: .78rem; color: var(--muted); flex-wrap: wrap; gap: 6px; }
+
+/* Overview */
+.ov-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.stat { padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; color: var(--ink); }
+.stat:hover { border-color: var(--accent); }
+.stat b { display: block; font-size: 1.5rem; font-family: Cinzel, Georgia, serif; }
+.stat span { font-size: .8rem; color: var(--muted); }
+.steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.steps a { display: flex; gap: 10px; align-items: flex-start; padding: 7px 8px; border-radius: 8px; text-decoration: none; color: var(--ink); }
+.steps a:hover { background: var(--surface-2); }
+.steps .mark { width: 20px; height: 20px; flex: none; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: .7rem; margin-top: 1px; }
+.steps .done .mark { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.steps .done .step-text { color: var(--muted); text-decoration: line-through; }
+.progress { height: 8px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 6px 0 12px; }
+.progress > div { height: 100%; background: var(--ok); }
+.mini-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+
+/* Tools */
+.tools { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; gap: 20px; align-items: start; }
+.dice-btns { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.dice-btns .btn { padding-left: 4px; padding-right: 4px; }
+.dice-btns .wide { grid-column: span 2; }
+.dice-btns .full { grid-column: 1 / -1; }
+.roll-out { text-align: center; padding: 16px 8px; }
+.roll-total { font-family: Cinzel, Georgia, serif; font-size: 3rem; font-weight: 700; line-height: 1; }
+.roll-total.crit { color: var(--ok); } .roll-total.fumble { color: var(--bad); }
+.roll-detail { color: var(--muted); font-size: .88rem; margin-top: 6px; word-break: break-word; }
+.roll-detail s { opacity: .55; }
+.history { list-style: none; padding: 0; margin: 0; font-size: .85rem; max-height: 220px; overflow-y: auto; }
+.history li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line); }
+.gens { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.gen-out { margin: 10px 0; font-size: .9rem; min-height: 40px; }
+.gen-out dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
+.gen-out dt { color: var(--muted); font-size: .8rem; font-weight: 600; }
+.gen-out dd { margin: 0; }
+.gen-title { font-weight: 700; font-size: 1.02rem; margin-bottom: 6px; }
+
+/* Welcome */
+.welcome { max-width: 640px; margin: 8vh auto; text-align: center; }
+.welcome h1 { font-size: 2.2rem; color: var(--accent); }
+.welcome p { color: var(--muted); font-size: 1.05rem; }
+.welcome .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; z-index: 100; box-shadow: var(--shadow); }
+.only-narrow { display: none !important; }
+
+@media (max-width: 1100px) {
+  .ov-grid, .tools { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .menu-toggle { display: inline-block; }
+  .sidebar { position: fixed; top: 57px; left: 0; width: 250px; z-index: 25; transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow); }
+  body.nav-open .sidebar { transform: none; }
+  .main { padding: 16px; }
+  .split { grid-template-columns: 1fr; }
+  .listpane { position: static; max-height: none; }
+  .split.has-sel .listpane { display: none; }
+  .split:not(.has-sel) .editorpane { display: none; }
+  .only-narrow { display: inline-flex !important; }
+  .topbar { gap: 8px; padding: 10px 12px; }
+  .top-search { max-width: none; min-width: 90px; }
+  .topbar select { max-width: 120px; }
+  .saved { display: none; }
+  .brand-text { display: none; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .form { grid-template-columns: 1fr; }
+  .field.half { grid-column: 1 / -1; }
+  .mon-row { grid-template-columns: 1fr 76px 60px auto; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
+  <a class="brand" href="#/overview">⚔<span class="brand-text"> Campaign Forge</span></a>
+  <select id="campaignSelect" aria-label="Campaign"></select>
+  <input type="search" class="top-search" id="globalSearch" placeholder="Search everything…" aria-label="Search">
+  <span class="saved" id="saved"></span>
+  <details class="menu" id="menu">
+    <summary class="icon-btn" aria-label="More">⋯</summary>
+    <div class="menu-list">
+      <button data-menu="new">＋ New campaign</button>
+      <button data-menu="sample">✦ Add sample campaign</button>
+      <hr>
+      <button data-menu="exportJson">⭳ Export campaign (JSON backup)</button>
+      <button data-menu="exportMd">⭳ Export as Markdown document</button>
+      <button data-menu="import">⭱ Import campaign (JSON)</button>
+      <hr>
+      <button data-menu="theme">◐ Toggle light / dark</button>
+      <button data-menu="delete" style="color:var(--bad)">✕ Delete this campaign</button>
+    </div>
+  </details>
+</header>
+<div class="layout">
+  <nav class="sidebar nav" id="sidebar"></nav>
+  <main class="main" id="main"></main>
+</div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+'use strict';
+/* =========================================================
+   Helpers
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const main = $('#main');
+// Only touch the DOM when markup changed, so a blur-triggered refresh never swaps out an element mid-click.
+function setHTML(el, html) { if (el && el.innerHTML !== html && el._html !== html) { el.innerHTML = html; el._html = html; } }
+
+/* =========================================================
+   Entity types
+   ========================================================= */
+const ATT_TONE = { Friendly: 'ok', Ally: 'ok', Neutral: 'muted', Wary: 'warn', Rival: 'warn', Hostile: 'bad', Enemy: 'bad' };
+const TYPES = {
+  pcs: {
+    label: 'Party', one: 'Character', icon: '🛡️', group: 'world',
+    blurb: 'The heroes. Their backstories are your best source of plot hooks.',
+    fields: [
+      { k: 'name', l: 'Character name', t: 'text' },
+      { k: 'player', l: 'Player', t: 'text', half: 1 },
+      { k: 'level', l: 'Level', t: 'number', half: 1, min: 1, max: 20 },
+      { k: 'race', l: 'Species / race', t: 'text', half: 1 },
+      { k: 'cls', l: 'Class', t: 'text', half: 1 },
+      { k: 'background', l: 'Background', t: 'text' },
+      { k: 'hooks', l: 'Backstory hooks', t: 'textarea', ph: 'Unresolved threads from their past you can weave into the story…' },
+      { k: 'goals', l: 'Personal goals', t: 'textarea' },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: () => ({ level: 1 }),
+    sub: e => [e.race, e.cls, e.player && `played by ${e.player}`].filter(Boolean).join(' · '),
+    badge: e => e.level ? { text: `Lv ${e.level}`, tone: 'gold' } : null,
+  },
+  npcs: {
+    label: 'NPCs', one: 'NPC', icon: '🎭', group: 'world',
+    blurb: 'Allies, villains and everyone in between. Give each one a want and a secret.',
+    fields: [
+      { k: 'name', l: 'Name', t: 'text' },
+      { k: 'role', l: 'Role / occupation', t: 'text', half: 1 },
+      { k: 'race', l: 'Species / race', t: 'text', half: 1 },
+      { k: 'location', l: 'Found at', t: 'text', half: 1, ref: 1, ph: 'A location name' },
+      { k: 'faction', l: 'Faction', t: 'text', half: 1, ref: 1 },
+      { k: 'attitude', l: 'Attitude to party', t: 'select', half: 1, opts: ['Friendly', 'Neutral', 'Wary', 'Hostile'] },
+      { k: 'status', l: 'Status', t: 'select', half: 1, opts: ['Alive', 'Dead', 'Missing', 'Unknown'] },
+      { k: 'appearance', l: 'Appearance', t: 'textarea', rows: 2 },
+      { k: 'personality', l: 'Personality, voice & mannerisms', t: 'textarea', rows: 2 },
+      { k: 'motivation', l: 'What do they want?', t: 'textarea', rows: 2 },
+      { k: 'secret', l: 'Secret', t: 'textarea', rows: 2 },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: () => ({ attitude: 'Neutral', status: 'Alive' }),
+    sub: e => [e.role, e.location].filter(Boolean).join(' · '),
+    badge: e => e.status && e.status !== 'Alive' ? { text: e.status, tone: 'muted' } : e.attitude ? { text: e.attitude, tone: ATT_TONE[e.attitude] } : null,
+  },
+  locations: {
+    label: 'Locations', one: 'Location', icon: '🏰', group: 'world',
+    blurb: 'Towns, dungeons, wilds and planes. Describe them with all five senses.',
+    fields: [
+      { k: 'name', l: 'Name', t: 'text' },
+      { k: 'kind', l: 'Type', t: 'select', half: 1, opts: ['City', 'Town', 'Village', 'Tavern / Shop', 'Dungeon', 'Wilderness', 'Landmark', 'Stronghold', 'Plane', 'Other'] },
+      { k: 'region', l: 'Region / part of', t: 'text', half: 1, ref: 1 },
+      { k: 'description', l: 'Description', t: 'textarea' },
+      { k: 'senses', l: 'Sights, sounds & smells', t: 'textarea', rows: 2 },
+      { k: 'features', l: 'Points of interest', t: 'textarea' },
+      { k: 'secrets', l: 'Secrets & dangers', t: 'textarea', rows: 2 },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: () => ({ kind: 'Town' }),
+    sub: e => [e.kind, e.region].filter(Boolean).join(' · '),
+  },
+  factions: {
+    label: 'Factions', one: 'Faction', icon: '⚜️', group: 'world',
+    blurb: 'Organizations with goals of their own. The world moves even when the party doesn’t.',
+    fields: [
+      { k: 'name', l: 'Name', t: 'text' },
+      { k: 'attitude', l: 'Stance toward party', t: 'select', half: 1, opts: ['Ally', 'Friendly', 'Neutral', 'Rival', 'Enemy'] },
+      { k: 'leader', l: 'Leader', t: 'text', half: 1, ref: 1 },
+      { k: 'goals', l: 'Goals', t: 'textarea', rows: 2 },
+      { k: 'methods', l: 'Methods', t: 'textarea', rows: 2 },
+      { k: 'resources', l: 'Resources & strongholds', t: 'textarea', rows: 2 },
+      { k: 'clock', l: 'Progress toward goal', t: 'select', half: 1, opts: ['0 / 6', '1 / 6', '2 / 6', '3 / 6', '4 / 6', '5 / 6', '6 / 6 — achieved'] },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: () => ({ attitude: 'Neutral', clock: '0 / 6' }),
+    sub: e => [e.leader && `Led by ${e.leader}`, e.clock && `Clock ${e.clock}`].filter(Boolean).join(' · '),
+    badge: e => e.attitude ? { text: e.attitude, tone: ATT_TONE[e.attitude] } : null,
+  },
+  quests: {
+    label: 'Quests', one: 'Quest', icon: '📜', group: 'world',
+    blurb: 'Plot threads and adventures. Track what’s active, what’s done and what’s just an idea.',
+    fields: [
+      { k: 'name', l: 'Quest name', t: 'text' },
+      { k: 'status', l: 'Status', t: 'select', half: 1, opts: ['Idea', 'Active', 'Completed', 'Failed', 'Abandoned'] },
+      { k: 'kind', l: 'Type', t: 'select', half: 1, opts: ['Main', 'Side', 'Personal'] },
+      { k: 'giver', l: 'Quest giver', t: 'text', half: 1, ref: 1 },
+      { k: 'location', l: 'Location', t: 'text', half: 1, ref: 1 },
+      { k: 'hook', l: 'Hook', t: 'textarea', rows: 2, ph: 'How does the party get pulled in?' },
+      { k: 'objectives', l: 'Objectives', t: 'textarea' },
+      { k: 'complications', l: 'Complications & twists', t: 'textarea', rows: 2 },
+      { k: 'reward', l: 'Reward', t: 'text' },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: () => ({ status: 'Idea', kind: 'Side' }),
+    sub: e => [e.kind, e.giver].filter(Boolean).join(' · '),
+    badge: e => e.status ? { text: e.status, tone: { Idea: 'muted', Active: 'info', Completed: 'ok', Failed: 'bad', Abandoned: 'muted' }[e.status] } : null,
+  },
+  items: {
+    label: 'Items', one: 'Item', icon: '💎', group: 'world',
+    blurb: 'Magic items, artifacts and treasure worth remembering.',
+    fields: [
+      { k: 'name', l: 'Name', t: 'text' },
+      { k: 'rarity', l: 'Rarity', t: 'select', half: 1, opts: ['Mundane', 'Common', 'Uncommon', 'Rare', 'Very Rare', 'Legendary', 'Artifact'] },
+      { k: 'kind', l: 'Type', t: 'text', half: 1, ph: 'Weapon, ring, wondrous item…' },
+      { k: 'holder', l: 'Held by / found at', t: 'text', half: 1, ref: 1 },
+      { k: 'attune', l: 'Requires attunement', t: 'checkbox', half: 1 },
+      { k: 'description', l: 'Description & properties', t: 'textarea' },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: () => ({ rarity: 'Uncommon' }),
+    sub: e => [e.kind, e.holder].filter(Boolean).join(' · '),
+    badge: e => e.rarity ? { text: e.rarity, tone: { Rare: 'info', 'Very Rare': 'info', Legendary: 'gold', Artifact: 'bad' }[e.rarity] || 'muted' } : null,
+  },
+  sessions: {
+    label: 'Sessions', one: 'Session', icon: '📅', group: 'table',
+    blurb: 'Prep each session: a strong start, possible scenes, and secrets to reveal. Recap afterward.',
+    fields: [
+      { k: 'name', l: 'Session title', t: 'text' },
+      { k: 'number', l: 'Session #', t: 'number', half: 1, min: 0 },
+      { k: 'date', l: 'Date', t: 'date', half: 1 },
+      { k: 'status', l: 'Status', t: 'select', half: 1, opts: ['Planned', 'Played'] },
+      { k: 'strong', l: 'Strong start', t: 'textarea', rows: 2, ph: 'Open with action, mystery or a hard choice…' },
+      { k: 'scenes', l: 'Potential scenes', t: 'textarea' },
+      { k: 'clues', l: 'Secrets & clues to reveal', t: 'textarea', ph: 'Write ~10 short facts the party could discover. Don’t tie them to specific scenes.' },
+      { k: 'npcsLocs', l: 'NPCs, locations & monsters involved', t: 'textarea', rows: 2, ph: 'Use [[Name]] to link them' },
+      { k: 'rewards', l: 'Rewards', t: 'textarea', rows: 2 },
+      { k: 'recap', l: 'Recap (after the session)', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: c => ({ status: 'Planned', number: c.entities.sessions.reduce((m, s) => Math.max(m, +s.number || 0), 0) + 1 }),
+    newName: e => `Session ${e.number}`,
+    sort: (a, b) => (+a.number || 0) - (+b.number || 0),
+    sub: e => [e.number !== '' && e.number != null && `#${e.number}`, e.date && fmtDate(e.date)].filter(Boolean).join(' · '),
+    badge: e => e.status ? { text: e.status, tone: e.status === 'Played' ? 'ok' : 'info' } : null,
+  },
+  encounters: {
+    label: 'Encounters', one: 'Encounter', icon: '🐉', group: 'table',
+    blurb: 'Build combat encounters and check their difficulty against your party (5e DMG rules).',
+    fields: [
+      { k: 'name', l: 'Encounter name', t: 'text' },
+      { k: 'kind', l: 'Type', t: 'select', half: 1, opts: ['Combat', 'Social', 'Exploration', 'Trap / Puzzle'] },
+      { k: 'location', l: 'Location', t: 'text', half: 1, ref: 1 },
+      { k: 'monsters', l: 'Monsters', t: 'monsters' },
+      { k: 'setup', l: 'Terrain & setup', t: 'textarea', rows: 2 },
+      { k: 'tactics', l: 'Tactics', t: 'textarea', rows: 2 },
+      { k: 'treasure', l: 'Treasure', t: 'textarea', rows: 2 },
+      { k: 'notes', l: 'Notes', t: 'textarea' },
+      { k: 'tags', l: 'Tags', t: 'tags' }],
+    defaults: c => {
+      const pcs = c.entities.pcs;
+      const avg = pcs.length ? Math.round(pcs.reduce((s, p) => s + (+p.level || 1), 0) / pcs.length) : 1;
+      return { kind: 'Combat', monsters: [], useParty: pcs.length > 0, partySize: pcs.length || 4, partyLevel: avg };
+    },
+    sub: e => {
+      const n = (e.monsters || []).reduce((s, m) => s + (+m.count || 0), 0);
+      return [e.kind, n ? `${n} creature${n > 1 ? 's' : ''}` : '', e.location].filter(Boolean).join(' · ');
+    },
+    badge: e => {
+      if (!(e.monsters || []).length) return null;
+      const r = encCalc(camp(), e);
+      return { text: r.label, tone: r.tone };
+    },
+  },
+};
+const SECTION_ORDER = ['overview', 'pcs', 'npcs', 'locations', 'factions', 'quests', 'items', 'sessions', 'encounters', 'tools'];
+
+/* =========================================================
+   Encounter math (D&D 5e DMG)
+   ========================================================= */
+const THRESH = { 1: [25, 50, 75, 100], 2: [50, 100, 150, 200], 3: [75, 150, 225, 400], 4: [125, 250, 375, 500], 5: [250, 500, 750, 1100], 6: [300, 600, 900, 1400], 7: [350, 750, 1100, 1700], 8: [450, 900, 1400, 2100], 9: [550, 1100, 1600, 2400], 10: [600, 1200, 1900, 2800], 11: [800, 1600, 2400, 3600], 12: [1000, 2000, 3000, 4500], 13: [1100, 2200, 3400, 5100], 14: [1250, 2500, 3800, 5700], 15: [1400, 2800, 4300, 6400], 16: [1600, 3200, 4800, 7200], 17: [2000, 3900, 5900, 8800], 18: [2100, 4200, 6300, 9500], 19: [2400, 4900, 7300, 10900], 20: [2800, 5700, 8500, 12700] };
+const CR_XP = { '0': 10, '1/8': 25, '1/4': 50, '1/2': 100, '1': 200, '2': 450, '3': 700, '4': 1100, '5': 1800, '6': 2300, '7': 2900, '8': 3900, '9': 5000, '10': 5900, '11': 7200, '12': 8400, '13': 10000, '14': 11500, '15': 13000, '16': 15000, '17': 18000, '18': 20000, '19': 22000, '20': 25000, '21': 33000, '22': 41000, '23': 50000, '24': 62000, '25': 75000, '26': 90000, '27': 105000, '28': 120000, '29': 135000, '30': 155000 };
+const CRS = Object.keys(CR_XP);
+const MULTS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
+const clampLvl = l => Math.min(20, Math.max(1, Math.round(+l || 1)));
+
+function encCalc(c, e) {
+  const pcs = c ? c.entities.pcs : [];
+  const levels = e.useParty && pcs.length
+    ? pcs.map(p => clampLvl(p.level))
+    : Array(Math.max(1, Math.min(12, Math.round(+e.partySize || 4)))).fill(clampLvl(e.partyLevel));
+  const t = [0, 0, 0, 0];
+  levels.forEach(l => THRESH[l].forEach((v, i) => t[i] += v));
+  let xp = 0, n = 0;
+  (e.monsters || []).forEach(m => { const k = Math.max(0, Math.round(+m.count || 0)); xp += (CR_XP[m.cr] || 0) * k; n += k; });
+  let idx = n <= 1 ? 1 : n === 2 ? 2 : n <= 6 ? 3 : n <= 10 ? 4 : n <= 14 ? 5 : 6;
+  if (levels.length < 3) idx++;
+  else if (levels.length >= 6) idx--;
+  const mult = n ? MULTS[Math.max(0, Math.min(7, idx))] : 1;
+  const adj = Math.round(xp * mult);
+  let label = 'Trivial', tone = 'muted';
+  if (adj >= t[3]) { label = 'Deadly'; tone = 'bad'; }
+  else if (adj >= t[2]) { label = 'Hard'; tone = 'warn'; }
+  else if (adj >= t[1]) { label = 'Medium'; tone = 'info'; }
+  else if (adj >= t[0]) { label = 'Easy'; tone = 'ok'; }
+  return { levels, t, xp, n, mult, adj, label, tone, perPC: Math.round(xp / levels.length) };
+}
+
+/* =========================================================
+   Storage
+   ========================================================= */
+const KEY = 'campaign-forge-v1';
+let db;
+function load() {
+  try { db = JSON.parse(localStorage.getItem(KEY)); } catch { db = null; }
+  if (!db || !Array.isArray(db.campaigns)) db = { campaigns: [], currentId: null, theme: null };
+  db.campaigns.forEach(ensure);
+  if (!db.campaigns.some(c => c.id === db.currentId)) db.currentId = db.campaigns[0]?.id ?? null;
+}
+let saveTimer;
+function save() {
+  clearTimeout(saveTimer);
+  $('#saved').textContent = 'Saving…';
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(db)); $('#saved').textContent = 'Saved ✓'; }
+    catch { $('#saved').textContent = 'Not saved'; toast('Could not save — browser storage is full or blocked. Export a backup!'); }
+  }, 300);
+}
+function ensure(c) {
+  c.id ||= uid(); c.name ||= 'Untitled campaign'; c.overview ||= {}; c.entities ||= {};
+  for (const k in TYPES) if (!Array.isArray(c.entities[k])) c.entities[k] = [];
+  return c;
+}
+const camp = () => db.campaigns.find(c => c.id === db.currentId);
+function touch(c) { c.updated = Date.now(); save(); }
+function addCampaign(c) { ensure(c); db.campaigns.push(c); db.currentId = c.id; save(); return c; }
+
+/* =========================================================
+   Routing  (#/section/id)
+   ========================================================= */
+let view = { section: 'overview', sel: null, filter: '', tag: null, q: '' };
+function go(section, id) { location.hash = `#/${section}${id ? '/' + id : ''}`; }
+function parseHash() {
+  const [, section = 'overview', id = null] = location.hash.split('/');
+  const sec = SECTION_ORDER.includes(section) || section === 'search' ? section : 'overview';
+  if (sec !== view.section) { view.filter = ''; view.tag = null; }
+  view.section = sec; view.sel = id;
+}
+window.addEventListener('hashchange', () => { parseHash(); document.body.classList.remove('nav-open'); render(); window.scrollTo(0, 0); });
+
+/* =========================================================
+   Rendering
+   ========================================================= */
+function render() { applyTheme(); renderTop(); renderNav(); renderMain(); }
+
+function renderTop() {
+  const sel = $('#campaignSelect');
+  sel.innerHTML = db.campaigns.length
+    ? db.campaigns.map(c => `<option value="${c.id}" ${c.id === db.currentId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')
+    : '<option>No campaigns yet</option>';
+  sel.disabled = !db.campaigns.length;
+}
+
+function renderNav() {
+  const c = camp();
+  if (!c) { setHTML($('#sidebar'), ''); return; }
+  const link = (sec, icon, label, count) => `<a href="#/${sec}" class="${view.section === sec ? 'active' : ''}"><span>${icon}</span>${label}${count != null ? `<span class="count">${count}</span>` : ''}</a>`;
+  const typeLinks = g => Object.entries(TYPES).filter(([, T]) => T.group === g).map(([k, T]) => link(k, T.icon, T.label, c.entities[k].length)).join('');
+  setHTML($('#sidebar'), link('overview', '🗺️', 'Overview')
+    + '<div class="nav-group">World & story</div>' + typeLinks('world')
+    + '<div class="nav-group">At the table</div>' + typeLinks('table') + link('tools', '🎲', 'Dice & generators'));
+}
+
+function renderMain() {
+  const c = camp();
+  if (!c) return renderWelcome();
+  if (view.section === 'overview') renderOverview(c);
+  else if (view.section === 'tools') renderTools(c);
+  else if (view.section === 'search') renderSearch(c);
+  else renderSection(c, view.section);
+}
+
+function renderWelcome() {
+  main.innerHTML = `<div class="welcome">
+    <div style="font-size:3rem">⚔️</div>
+    <h1>Campaign Forge</h1>
+    <p>Plan your Dungeons &amp; Dragons campaign in one place: your party, NPCs, locations, factions, quests, session prep and balanced encounters, plus dice and random generators for when you need to improvise.</p>
+    <div class="actions">
+      <button class="btn primary" data-act="newCamp">＋ Start a new campaign</button>
+      <button class="btn" data-act="sample">✦ Explore a sample campaign</button>
+      <button class="btn ghost" data-act="import">⭱ Import backup</button>
+    </div>
+    <p style="font-size:.85rem;margin-top:24px">Everything is saved in this browser. Use <b>Export</b> in the ⋯ menu to back up or move your campaign.</p>
+  </div>`;
+}
+
+/* ---------- Overview ---------- */
+const OV_FIELDS = [
+  { k: 'pitch', l: 'Campaign pitch', t: 'textarea', rows: 3, ph: 'One or two sentences: what is this campaign about?' },
+  { k: 'setting', l: 'Setting', t: 'text', ph: 'World, region or city where it takes place' },
+  { k: 'tone', l: 'Tone', t: 'text', half: 1, ph: 'Heroic, grim, comedic, horror…' },
+  { k: 'themes', l: 'Themes', t: 'text', half: 1, ph: 'Redemption, power, family…' },
+  { k: 'levelStart', l: 'Starting level', t: 'number', half: 1, min: 1, max: 20 },
+  { k: 'levelEnd', l: 'Ending level', t: 'number', half: 1, min: 1, max: 20 },
+  { k: 'villain', l: 'Main villain / central threat', t: 'text', ref: 1 },
+  { k: 'villainGoal', l: 'What the villain wants (and what happens if nobody stops them)', t: 'textarea', rows: 2 },
+  { k: 'truths', l: 'Truths about the world', t: 'textarea', rows: 4, ph: 'A few facts that make this world unique: its gods, history, magic, conflicts…' },
+  { k: 'safety', l: 'Table expectations & safety tools', t: 'textarea', rows: 2, ph: 'Lines & veils, session zero notes, house rules…' },
+  { k: 'notes', l: 'Notes', t: 'textarea' },
+];
+function checklist(c) {
+  const o = c.overview, E = c.entities;
+  return [
+    ['Write a one-sentence pitch', !!o.pitch?.trim(), 'overview'],
+    ['Define the tone & themes', !!(o.tone?.trim() && o.themes?.trim()), 'overview'],
+    ['Create a villain or central threat', !!o.villain?.trim(), 'overview'],
+    ['Add the player characters', E.pcs.length > 0, 'pcs'],
+    ['Build a starting location', E.locations.length > 0, 'locations'],
+    ['Create at least 3 NPCs', E.npcs.length >= 3, 'npcs'],
+    ['Introduce 2 or more factions', E.factions.length >= 2, 'factions'],
+    ['Write the opening quest', E.quests.length > 0, 'quests'],
+    ['Plan session 1', E.sessions.length > 0, 'sessions'],
+    ['Prepare an encounter', E.encounters.length > 0, 'encounters'],
+  ];
+}
+function renderOverview(c) {
+  main.innerHTML = `<div class="ov-grid">
+    <div class="card">
+      <div class="editor-head"><span class="kicker">🗺️ Campaign overview</span><span class="spacer"></span>
+        <button class="btn small" data-act="inspire">✦ Inspire me</button></div>
+      <div class="form">
+        <label class="field"><span>Campaign name</span><input type="text" class="title-input" data-ov="__name" value="${esc(c.name)}"></label>
+        ${OV_FIELDS.map(f => fieldHTML(f, c.overview, 'ov')).join('')}
+      </div>
+      <div class="hint">Tip: in any text box, link to anything by name with double brackets, like <code>[[Gullhaven]]</code>.</div>
+    </div>
+    <div class="stack" id="ovSide"></div>
+  </div>`;
+  renderOverviewSide(c);
+  autosizeAll();
+}
+function renderOverviewSide(c) {
+  const steps = checklist(c), done = steps.filter(s => s[1]).length;
+  const stats = ['pcs', 'npcs', 'locations', 'factions', 'quests', 'items', 'sessions', 'encounters']
+    .map(k => `<a class="stat" href="#/${k}"><b>${c.entities[k].length}</b><span>${TYPES[k].icon} ${TYPES[k].label}</span></a>`).join('');
+  const active = c.entities.quests.filter(q => q.status === 'Active');
+  const next = [...c.entities.sessions].filter(s => s.status !== 'Played').sort(TYPES.sessions.sort)[0];
+  const villain = c.overview.villain && findByName(c, c.overview.villain);
+  $('#ovSide').innerHTML = `
+    <div class="card"><h2>Campaign building steps</h2>
+      <div style="font-size:.85rem;color:var(--muted)">${done} of ${steps.length} complete</div>
+      <div class="progress"><div style="width:${done / steps.length * 100}%"></div></div>
+      <ul class="steps">${steps.map(([t, ok, sec]) => `<li class="${ok ? 'done' : ''}"><a href="#/${sec}"><span class="mark">${ok ? '✓' : ''}</span><span class="step-text">${t}</span></a></li>`).join('')}</ul>
+      ${c.overview.villain && !villain ? `<p class="hint">Your villain isn’t an NPC yet. <button class="btn small" data-act="mkVillain">Create NPC “${esc(c.overview.villain)}”</button></p>` : ''}
+    </div>
+    <div class="stats">${stats}</div>
+    <div class="card"><h2>Next session</h2>${next
+      ? `<a class="item" href="#/sessions/${next.id}"><span class="item-title">${esc(next.name)}</span><span class="item-sub">${esc(TYPES.sessions.sub(next) || 'Not scheduled')}</span></a>${next.strong ? `<p style="margin:10px 0 0;font-size:.9rem">${esc(next.strong)}</p>` : ''}`
+      : `<p class="blurb">No upcoming session planned.</p><button class="btn small" data-act="addType" data-type="sessions" style="margin-top:8px">＋ Plan a session</button>`}</div>
+    <div class="card"><h2>Active quests</h2>${active.length
+      ? `<ul class="mini-list">${active.map(q => `<li><a class="item" href="#/quests/${q.id}"><span class="item-title">${esc(q.name)}</span><span class="item-sub">${esc(TYPES.quests.sub(q))}</span></a></li>`).join('')}</ul>`
+      : '<p class="blurb">No active quests. Set a quest’s status to “Active” to see it here.</p>'}</div>`;
+}
+
+/* ---------- Entity sections ---------- */
+function renderSection(c, type) {
+  const T = TYPES[type];
+  const sel = c.entities[type].find(e => e.id === view.sel);
+  main.innerHTML = `<div class="split ${sel ? 'has-sel' : ''}">
+    <section class="listpane">
+      <div class="list-head"><h1>${T.icon} ${T.label}</h1><button class="btn primary" data-act="add">＋ Add</button></div>
+      <p class="blurb">${T.blurb}</p>
+      <input type="search" class="input" id="listSearch" placeholder="Filter ${T.label.toLowerCase()}…" value="${esc(view.filter)}">
+      <div class="tagbar" id="tagbar"></div>
+      <ul class="items" id="items"></ul>
+    </section>
+    <section class="editorpane" id="editor"></section>
+  </div>`;
+  renderList(c, type);
+  if (sel) renderEditor(c, type, sel);
+  else $('#editor').innerHTML = `<div class="empty">${c.entities[type].length ? `Select a ${T.one.toLowerCase()} to edit it, or add a new one.` : `No ${T.label.toLowerCase()} yet.<br><br><button class="btn primary" data-act="add">＋ Add your first ${T.one.toLowerCase()}</button>`}</div>`;
+}
+function entText(e) { return Object.values(e).map(v => Array.isArray(v) ? v.map(x => typeof x === 'object' ? Object.values(x).join(' ') : x).join(' ') : String(v ?? '')).join(' ').toLowerCase(); }
+function renderList(c, type) {
+  const T = TYPES[type];
+  const all = c.entities[type];
+  const tags = [...new Set(all.flatMap(e => e.tags || []))].sort();
+  if (view.tag && !tags.includes(view.tag)) view.tag = null;
+  setHTML($('#tagbar'), tags.map(t => `<button class="chip ${view.tag === t ? 'on' : ''}" data-act="tag" data-tag="${esc(t)}">#${esc(t)}</button>`).join(''));
+  const q = view.filter.trim().toLowerCase();
+  const list = all.filter(e => (!q || entText(e).includes(q)) && (!view.tag || (e.tags || []).includes(view.tag)))
+    .sort(T.sort || ((a, b) => (a.name || '').localeCompare(b.name || '')));
+  setHTML($('#items'), list.length ? list.map(e => {
+    const b = T.badge?.(e);
+    return `<li><a class="item ${e.id === view.sel ? 'active' : ''}" href="#/${type}/${e.id}">
+      <span class="item-title"><span>${esc(e.name || 'Untitled')}</span>${b ? `<span class="badge tone-${b.tone}">${esc(b.text)}</span>` : ''}</span>
+      <span class="item-sub">${esc(T.sub(e)) || '&nbsp;'}</span></a></li>`;
+  }).join('') : (all.length ? '<li class="empty">Nothing matches.</li>' : ''));
+}
+
+function fieldHTML(f, obj, scope) {
+  const attr = scope === 'ov' ? `data-ov="${f.k}"` : `data-f="${f.k}"`;
+  const v = obj[f.k];
+  const cls = `field ${f.half ? 'half' : ''}`;
+  const ph = f.ph ? `placeholder="${esc(f.ph)}"` : '';
+  const list = f.ref ? 'list="entityNames"' : '';
+  switch (f.t) {
+    case 'textarea': return `<label class="${cls}"><span>${f.l}</span><textarea ${attr} rows="${f.rows || 3}" ${ph}>${esc(v)}</textarea></label>`;
+    case 'select': return `<label class="${cls}"><span>${f.l}</span><select ${attr}>${f.opts.map(o => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')}</select></label>`;
+    case 'checkbox': return `<label class="${cls} check" style="flex-direction:row;align-self:end;padding-bottom:8px"><input type="checkbox" ${attr} ${v ? 'checked' : ''}> ${f.l}</label>`;
+    case 'number': return `<label class="${cls}"><span>${f.l}</span><input type="number" ${attr} value="${esc(v)}" ${f.min != null ? `min="${f.min}"` : ''} ${f.max != null ? `max="${f.max}"` : ''}></label>`;
+    case 'date': return `<label class="${cls}"><span>${f.l}</span><input type="date" ${attr} value="${esc(v)}"></label>`;
+    case 'tags': return `<label class="${cls}"><span>${f.l} <span class="help">(comma separated)</span></span><input type="text" ${attr} data-tags="1" value="${esc((v || []).join(', '))}" placeholder="e.g. act 1, villain, dockside"></label>`;
+    case 'monsters': return monstersHTML(obj);
+    default: return `<label class="${cls}"><span>${f.l}</span><input type="text" ${attr} ${list} value="${esc(v)}" ${ph} ${f.k === 'name' ? 'class="title-input"' : ''}></label>`;
+  }
+}
+
+function renderEditor(c, type, e) {
+  const T = TYPES[type];
+  const other = Object.values(c.entities).flat().find(x => x.id !== e.id && x.name);
+  $('#editor').innerHTML = `<div class="card">
+    <div class="editor-head">
+      <a class="btn ghost small only-narrow" href="#/${type}">← ${T.label}</a>
+      <span class="kicker">${T.icon} ${T.one}</span><span class="spacer"></span>
+      <button class="btn ghost small" data-act="dup">Duplicate</button>
+      <button class="btn ghost small danger" data-act="del">Delete</button>
+    </div>
+    <div class="form">${T.fields.map(f => fieldHTML(f, e)).join('')}</div>
+    <datalist id="entityNames">${Object.values(c.entities).flat().filter(x => x.name).map(x => `<option value="${esc(x.name)}">`).join('')}</datalist>
+    <div class="hint">Tip: link to anything by writing its name in double brackets, like <code>[[${esc(other?.name || 'Gullhaven')}]]</code>. Links and backlinks appear below.</div>
+    <div class="links" id="links"></div>
+  </div>`;
+  renderLinks(c, type, e);
+  if (type === 'encounters') renderEncCalc(c, e);
+  autosizeAll();
+}
+
+/* ---------- Encounter editor ---------- */
+function monstersHTML(e) {
+  e.monsters ||= [];
+  const nPcs = camp().entities.pcs.length;
+  return `<div class="field"><span>Monsters</span>
+    <div class="mon-list">${e.monsters.map((m, i) => `<div class="mon-row">
+      <input type="text" data-m="name" data-i="${i}" value="${esc(m.name)}" placeholder="Monster name" aria-label="Monster name">
+      <select data-m="cr" data-i="${i}" aria-label="Challenge rating">${CRS.map(cr => `<option value="${cr}" ${cr === String(m.cr) ? 'selected' : ''}>CR ${cr}</option>`).join('')}</select>
+      <input type="number" min="1" data-m="count" data-i="${i}" value="${esc(m.count)}" aria-label="Count">
+      <button class="btn ghost small" data-act="delMonster" data-i="${i}" aria-label="Remove">✕</button></div>`).join('')}</div>
+    <div><button class="btn small" data-act="addMonster" style="margin-top:6px">＋ Add monster</button></div>
+    <div class="party-row">
+      <label class="check"><input type="checkbox" data-f="useParty" ${e.useParty ? 'checked' : ''} ${nPcs ? '' : 'disabled'}> Use my party (${nPcs} character${nPcs === 1 ? '' : 's'})</label>
+      <label class="inline ${e.useParty && nPcs ? 'hidden' : ''}" id="pSize">Party size <input type="number" min="1" max="12" data-f="partySize" value="${esc(e.partySize)}"></label>
+      <label class="inline ${e.useParty && nPcs ? 'hidden' : ''}" id="pLvl">Level <input type="number" min="1" max="20" data-f="partyLevel" value="${esc(e.partyLevel)}"></label>
+    </div>
+    <div id="encCalc"></div></div>`;
+}
+function renderEncCalc(c, e) {
+  const el = $('#encCalc'); if (!el) return;
+  const r = encCalc(c, e);
+  const manual = !(e.useParty && c.entities.pcs.length);
+  $('#pSize')?.classList.toggle('hidden', !manual); $('#pLvl')?.classList.toggle('hidden', !manual);
+  const max = r.t[3] * 1.3;
+  const pct = x => Math.min(100, x / max * 100);
+  el.innerHTML = `<div class="diff">
+    <div class="diff-label tone-${r.tone}">${r.n ? r.label : 'No monsters yet'}</div>
+    <div style="font-size:.9rem">${r.xp.toLocaleString()} XP × ${r.mult} (for ${r.n} creature${r.n === 1 ? '' : 's'}) = <b>${r.adj.toLocaleString()}</b> adjusted XP · Each character earns ${r.perPC.toLocaleString()} XP</div>
+    <div class="bar tone-${r.tone}"><div class="bar-fill" style="width:${pct(r.adj)}%"></div>${r.t.map(v => `<div class="bar-tick" style="left:${pct(v)}%"></div>`).join('')}</div>
+    <div class="thresh"><span>Easy ${r.t[0].toLocaleString()}</span><span>Medium ${r.t[1].toLocaleString()}</span><span>Hard ${r.t[2].toLocaleString()}</span><span>Deadly ${r.t[3].toLocaleString()}</span></div>
+    <div class="hint" style="margin-top:6px">Party of ${r.levels.length}: levels ${r.levels.join(', ')}</div></div>`;
+}
+
+/* ---------- Links & backlinks ---------- */
+function allEntities(c) { return Object.entries(c.entities).flatMap(([type, arr]) => arr.map(e => ({ type, e }))); }
+function findByName(c, name) { const n = name.trim().toLowerCase(); return allEntities(c).find(x => (x.e.name || '').trim().toLowerCase() === n); }
+function mentionsOf(type, e) {
+  const out = new Set();
+  for (const f of TYPES[type].fields) {
+    const v = e[f.k];
+    if (typeof v !== 'string') continue;
+    if (f.t === 'textarea') for (const m of v.matchAll(/\[\[([^\]]+)\]\]/g)) out.add(m[1].trim());
+    else if (f.ref && v.trim()) out.add(v.trim());
+  }
+  return [...out].filter(Boolean);
+}
+function renderLinks(c, type, e) {
+  const el = $('#links'); if (!el) return;
+  const chip = x => `<a class="link-chip" href="#/${x.type}/${x.e.id}">${TYPES[x.type].icon} ${esc(x.e.name)}</a>`;
+  const mentions = mentionsOf(type, e).filter(n => n.toLowerCase() !== (e.name || '').toLowerCase());
+  const found = [], missing = [];
+  mentions.forEach(n => { const x = findByName(c, n); x ? found.push(x) : missing.push(n); });
+  const name = (e.name || '').trim().toLowerCase();
+  const back = name ? allEntities(c).filter(x => x.e.id !== e.id && mentionsOf(x.type, x.e).some(n => n.toLowerCase() === name)) : [];
+  const typeOpts = Object.entries(TYPES).map(([k, T]) => `<option value="${k}">${T.one}</option>`).join('');
+  setHTML(el, (found.length || missing.length ? `<div class="row"><b>Links to</b>${found.map(chip).join('')}${missing.map(n =>
+    `<span class="link-chip missing" title="Nothing named “${esc(n)}” yet">${esc(n)}<select data-act="createMention" data-name="${esc(n)}" aria-label="Create ${esc(n)} as"><option value="">＋ create as…</option>${typeOpts}</select></span>`).join('')}</div>` : '')
+    + (back.length ? `<div class="row"><b>Mentioned by</b>${back.map(chip).join('')}</div>` : ''));
+}
+
+/* ---------- Search ---------- */
+function renderSearch(c) {
+  const q = view.q.trim().toLowerCase();
+  const hits = q ? allEntities(c).filter(x => entText(x.e).includes(q)) : [];
+  const ovHit = q && (c.name + ' ' + Object.values(c.overview).join(' ')).toLowerCase().includes(q);
+  main.innerHTML = `<h1 style="margin-bottom:14px">Search: “${esc(view.q)}”</h1>
+    ${!q ? '<p class="blurb">Type in the search box to find anything in this campaign.</p>' : ''}
+    ${ovHit ? `<p><a class="item" href="#/overview" style="max-width:640px"><span class="item-title">🗺️ Campaign overview</span><span class="item-sub">Matches in your overview</span></a></p>` : ''}
+    ${q && !hits.length && !ovHit ? '<div class="empty">No results.</div>' : ''}
+    <ul class="items" style="max-width:640px">${hits.map(({ type, e }) => `<li><a class="item" href="#/${type}/${e.id}">
+      <span class="item-title"><span>${TYPES[type].icon} ${esc(e.name || 'Untitled')}</span><span class="badge tone-muted">${TYPES[type].one}</span></span>
+      <span class="item-sub">${esc(snippet(entText(e), q))}</span></a></li>`).join('')}</ul>`;
+}
+function snippet(text, q) { const i = text.indexOf(q); return (i > 30 ? '…' : '') + text.slice(Math.max(0, i - 30), i + q.length + 60).trim() + '…'; }
+
+/* =========================================================
+   Dice
+   ========================================================= */
+const rollHistory = [];
+let lastRoll = null;
+function rollDice(expr) {
+  const s = expr.replace(/\s+/g, '').toLowerCase();
+  const terms = s.match(/[+-]?[^+-]+/g);
+  if (!s || !terms || terms.join('') !== s) throw new Error('bad');
+  let total = 0; const parts = [];
+  for (const term of terms) {
+    const sign = term[0] === '-' ? -1 : 1, body = term.replace(/^[+-]/, '');
+    const m = body.match(/^(\d*)d(\d+|%)(?:(kh|kl)(\d+))?$/);
+    if (m) {
+      const n = +(m[1] || 1), sides = m[2] === '%' ? 100 : +m[2];
+      if (n < 1 || n > 200 || sides < 2 || sides > 1000) throw new Error('range');
+      const rolls = Array.from({ length: n }, () => ({ v: 1 + Math.floor(Math.random() * sides), keep: true }));
+      if (m[3]) { const k = Math.min(+m[4], n); [...rolls].sort((a, b) => m[3] === 'kh' ? b.v - a.v : a.v - b.v).forEach((r, i) => r.keep = i < k); }
+      total += sign * rolls.filter(r => r.keep).reduce((a, r) => a + r.v, 0);
+      parts.push({ sign, body, rolls, sides });
+    } else if (/^\d+$/.test(body)) { total += sign * +body; parts.push({ sign, body, flat: +body }); }
+    else throw new Error('bad');
+  }
+  return { expr: s, total, parts };
+}
+function doRoll(expr) {
+  try { lastRoll = rollDice(expr); } catch { toast('Try something like 2d6+3, d20, 4d6kh3 or 2d20kl1'); return; }
+  rollHistory.unshift(lastRoll); rollHistory.length = Math.min(rollHistory.length, 30);
+  renderDice();
+}
+function rollDetail(r) {
+  return r.parts.map((p, i) => (i || p.sign < 0 ? (p.sign < 0 ? ' − ' : ' + ') : '') + (p.flat != null ? p.flat
+    : `${p.body} [${p.rolls.map(x => x.keep ? x.v : `<s>${x.v}</s>`).join(', ')}]`)).join('');
+}
+function renderDice() {
+  const out = $('#rollOut'); if (!out) return;
+  if (lastRoll) {
+    const d20 = lastRoll.parts.filter(p => p.sides === 20);
+    const nat = d20.length === 1 ? d20[0].rolls.filter(r => r.keep) : [];
+    const cls = nat.length === 1 ? (nat[0].v === 20 ? 'crit' : nat[0].v === 1 ? 'fumble' : '') : '';
+    out.innerHTML = `<div class="roll-total ${cls}">${lastRoll.total}</div><div class="roll-detail">${esc(lastRoll.expr)} → ${rollDetail(lastRoll)}${cls === 'crit' ? ' · Natural 20!' : cls === 'fumble' ? ' · Natural 1…' : ''}</div>`;
+  }
+  $('#history').innerHTML = rollHistory.slice(1).map(r => `<li><span>${esc(r.expr)}</span><b>${r.total}</b></li>`).join('');
+}
+function rollStats() {
+  const sets = Array.from({ length: 6 }, () => rollDice('4d6kh3').total).sort((a, b) => b - a);
+  lastRoll = { expr: 'ability scores (4d6 drop lowest ×6)', total: sets.join(' · '), parts: [] };
+  rollHistory.unshift(lastRoll);
+  const out = $('#rollOut');
+  out.innerHTML = `<div class="roll-total" style="font-size:1.8rem">${sets.join(' · ')}</div><div class="roll-detail">Ability scores — total ${sets.reduce((a, b) => a + b, 0)}, modifiers ${sets.map(s => { const m = Math.floor((s - 10) / 2); return m >= 0 ? '+' + m : m; }).join(' ')}</div>`;
+  $('#history').innerHTML = rollHistory.slice(1).map(r => `<li><span>${esc(r.expr)}</span><b>${r.total}</b></li>`).join('');
+}
+
+/* =========================================================
+   Generators
+   ========================================================= */
+const NAMES = {
+  Human: [['Aldric', 'Brenna', 'Cedric', 'Dara', 'Edwin', 'Freya', 'Gideon', 'Hilda', 'Isolde', 'Jasper', 'Kaelen', 'Liora', 'Marek', 'Nessa', 'Osric', 'Perrin', 'Rowena', 'Silas', 'Tamsin', 'Ulric', 'Vera', 'Wystan', 'Yara', 'Corin'], ['Ashford', 'Blackwood', 'Crane', 'Dunmore', 'Fairwind', 'Greaves', 'Hollow', 'Ironside', 'Kettle', 'Lark', 'Marsh', 'Pike', 'Redmane', 'Stone', 'Thorne', 'Vale']],
+  Dwarf: [['Borin', 'Dagna', 'Eldrek', 'Gunnhild', 'Harbek', 'Kathra', 'Morgran', 'Rurik', 'Torga', 'Vistra', 'Brottor', 'Helja'], ['Ironfist', 'Stonebeard', 'Deepdelver', 'Coppervein', 'Anvilborn', 'Flintheart', 'Granitehand']],
+  Elf: [['Aelar', 'Caelynn', 'Erevan', 'Ielenia', 'Lianthorn', 'Naivara', 'Quarion', 'Sariel', 'Thamior', 'Valanthe', 'Mialee', 'Theren'], ['Amakiir', 'Galanodel', 'Liadon', 'Moonwhisper', 'Siannodel', 'Starbloom', 'Nightbreeze']],
+  Halfling: [['Cade', 'Lidda', 'Merric', 'Seraphina', 'Roscoe', 'Verna', 'Pip', 'Bree', 'Milo', 'Poppy'], ['Brushgather', 'Goodbarrel', 'Tealeaf', 'Underbough', 'Tosscobble', 'Greenbottle']],
+  Gnome: [['Alston', 'Bimpnottin', 'Dimble', 'Ellyjobell', 'Fonkin', 'Orla', 'Zook', 'Nissa', 'Wrenn'], ['Beren', 'Daergel', 'Garrick', 'Nackle', 'Turen', 'Sprocketwhistle']],
+  'Half-Orc': [['Dench', 'Gell', 'Holg', 'Krusk', 'Baggi', 'Emen', 'Ovak', 'Shautha', 'Yevelda', 'Thokk'], ['the Unbowed', 'Skullsplitter', 'of the Red Tusk', 'Ironjaw', 'the Quiet']],
+  Tiefling: [['Akmenos', 'Damakos', 'Kallista', 'Mordai', 'Orianna', 'Rieta', 'Hope', 'Torment', 'Ash', 'Sorrow', 'Ember', 'Vesper'], ['', '', 'Vane', 'Kaziel', 'Nightshade']],
+  Dragonborn: [['Arjhan', 'Donaar', 'Kriv', 'Medrash', 'Sora', 'Harann', 'Thava', 'Biri', 'Nala'], ['Clethtinthiallor', 'Kerrhylon', 'Myastan', 'Yarjerit', 'Delmirev']],
+};
+const RACES = ['Human', 'Human', 'Human', 'Dwarf', 'Elf', 'Halfling', 'Gnome', 'Half-Orc', 'Tiefling', 'Dragonborn', 'Half-Elf'];
+function nameFor(race) {
+  if (race === 'Half-Elf') return `${pick(pick([NAMES.Human, NAMES.Elf])[0])} ${pick(NAMES.Human[1])}`;
+  const [f, l] = NAMES[race] || NAMES.Human;
+  return `${pick(f)} ${pick(l)}`.trim();
+}
+const T_ = {
+  occ: ['blacksmith', 'innkeeper', 'priest of a minor god', 'disgraced knight', 'smuggler', 'herbalist', 'guard captain', 'traveling merchant', 'scholar', 'grave keeper', 'fortune teller', 'bounty hunter', 'noble’s steward', 'ferryman', 'retired adventurer', 'alchemist', 'bard', 'fence for the thieves’ guild', 'cartographer', 'hedge witch'],
+  look: ['a jagged scar across one cheek', 'ink-stained fingers', 'an eyepatch embroidered with gold thread', 'braided silver hair', 'a nervous twitch', 'immaculate, expensive clothing', 'two missing fingers on the left hand', 'freckles and a gap-toothed grin', 'a towering, broad-shouldered frame', 'a tiny, wiry build', 'the faint smell of smoke', 'tattoos of old sailing charts', 'gloves they never take off', 'a cane carved like a serpent'],
+  pers: ['suspicious of strangers', 'relentlessly cheerful', 'blunt to the point of rudeness', 'a compulsive liar', 'fiercely loyal', 'greedy but honest about it', 'melancholy and poetic', 'nervous and eager to please', 'arrogant', 'kind but world-weary', 'curious about everything', 'quick to anger, quicker to forgive'],
+  want: ['to pay off a crushing debt', 'revenge on whoever ruined their family', 'to be remembered after they die', 'to protect a younger sibling', 'to find a legendary lost relic', 'to escape their past', 'respect from the local nobility', 'a cure for a mysterious illness', 'power, by any means', 'a quiet life, finally', 'to prove a rival wrong', 'the truth behind a friend’s disappearance'],
+  secret: ['is secretly a spy for a rival faction', 'killed someone years ago and was never caught', 'is the heir to a fallen noble house', 'owes a favor to a devil', 'knows the location of a hidden dungeon', 'is a shapechanger in disguise', 'has been stealing from their employer', 'is being blackmailed', 'worships a forbidden god', 'is dying and has told no one', 'once abandoned their adventuring party to die', 'has a twin nobody knows about'],
+  quirk: ['speaks in the third person', 'hums constantly', 'collects teeth', 'answers questions with questions', 'quotes proverbs, often incorrectly', 'never makes eye contact', 'laughs at inappropriate moments', 'rolls a coin across their knuckles', 'whispers everything', 'is painfully formal', 'calls everyone “friend”', 'chews on a pipe they never light'],
+  arche: ['a lich seeking to outlive the gods', 'a charismatic cult leader', 'a usurping regent', 'a dragon hoarding more than gold', 'a hag who trades in memories', 'a merchant prince with a mercenary army', 'a fallen paladin', 'a fey lord bored with mortals', 'an aberration dreaming beneath the city', 'a necromancer grieving a lost love'],
+  vgoal: ['to open a gate to another plane', 'to seize the throne', 'to resurrect someone who should stay dead', 'to become a god', 'to erase a bloodline', 'to plunge the land into eternal winter', 'to control the only source of magic in the land', 'to avenge an ancient betrayal'],
+  vmeth: ['through a network of informants', 'by corrupting the local clergy', 'with an army of the undead', 'through bargains and debts', 'by manipulating the heroes themselves', 'with forbidden rituals at each new moon'],
+  vweak: ['cannot enter holy ground', 'is bound by an ancient oath', 'loves someone who could betray them', 'hid their source of power in plain sight', 'has lieutenants who secretly despise them', 'fears being forgotten more than death'],
+  epithet: ['the Pale', 'the Unbroken', 'of the Ashen Veil', 'the Whisperer', 'the Crowned Wolf', 'the Hollow', 'the Last'],
+  patron: ['A desperate farmer', 'A hooded stranger', 'The local temple', 'A dying knight', 'A guild of merchants', 'A child with a strange map', 'The town council', 'An eccentric wizard', 'A grieving widow', 'A ghost'],
+  task: ['to recover a stolen relic from', 'to investigate disappearances near', 'to escort a mysterious cargo to', 'to clear out the creatures infesting', 'to deliver a sealed letter to', 'to rescue a kidnapped noble from', 'to find out what is poisoning the wells near', 'to negotiate a truce with the folk of'],
+  place: ['the flooded mines', 'the ruined abbey on the hill', 'the Whispering Woods', 'an abandoned lighthouse', 'the old dwarven road', 'a sunken temple', 'the border fortress', 'the sewers beneath the city', 'a village that appears only at night', 'the tomb of a forgotten king'],
+  twist: ['But the patron is lying about why.', 'But a rival adventuring party wants the same thing.', 'But the “monsters” are only defending their home.', 'But the job is a trap set by an old enemy.', 'But what they seek is alive — and doesn’t want to be found.', 'But the local lord forbids anyone from going there.', 'But it must be done before the next full moon.', 'But the reward is cursed.'],
+  tadj: ['Prancing', 'Drunken', 'Gilded', 'Rusty', 'Laughing', 'Sleeping', 'Crooked', 'Salty', 'Wandering', 'Silver', 'One-Eyed', 'Howling'],
+  tnoun: ['Griffon', 'Tankard', 'Dragon', 'Mermaid', 'Goat', 'Lantern', 'Boar', 'Wyvern', 'Owl', 'Anchor', 'Stag', 'Kraken'],
+  tfeat: ['The owner never seems to age.', 'A bard plays the same song every night, and no one knows why.', 'There is a locked cellar door nobody talks about.', 'It is the unofficial headquarters of the thieves’ guild.', 'The notice board overflows with bounties.', 'The house ale has a faint magical shimmer.'],
+  rumor: ['Someone saw lights in the old tower again.', 'The baron’s daughter ran off with a sellsword.', 'Wolves took three sheep last night, and they walked on two legs.', 'A dragon was spotted over the mountains.', 'The priest has been buying an awful lot of lamp oil.', 'There is gold in the river caves, if you can get past what lives there.'],
+  spre: ['Oak', 'Raven', 'Mill', 'Stone', 'Ash', 'Wolf', 'Cold', 'Brook', 'Thorn', 'Salt', 'Iron', 'Frost'],
+  ssuf: ['ford', 'haven', 'hollow', 'reach', 'wick', 'moor', 'gate', 'bury', 'fall', 'stead', 'mere', 'crest'],
+  known: ['its enormous annual fair', 'a miraculous healing spring', 'the finest horses in the realm', 'a haunted bell tower', 'its silver mines', 'a shrine to a forgotten saint', 'exotic spices from overseas', 'an ancient ring of standing stones'],
+  problem: ['wolves have grown bold and clever', 'the mayor has vanished', 'everyone shares the same nightmare', 'the river has turned red', 'bandits control the only road', 'strange lights hover in the hills each night', 'a dragon has been sighted', 'the dead refuse to stay buried'],
+  iobj: ['Ring', 'Cloak', 'Dagger', 'Amulet', 'Lantern', 'Boots', 'Shield', 'Staff', 'Mirror', 'Compass', 'Gauntlets', 'Quill'],
+  iof: ['Whispers', 'the Tides', 'Embers', 'the Hollow Moon', 'Second Chances', 'the Stag', 'Silent Steps', 'Clarity', 'the Deep', 'Warding'],
+  ipow: ['glows faintly when enemies are within 60 feet', 'lets the bearer cast misty step once per day', 'allows speaking with animals for 1 hour, once per day', 'grants advantage on checks to detect lies', 'always points toward the nearest fresh water', 'can store one spell of 3rd level or lower', 'makes the bearer immune to being frightened, but unable to sleep', 'whispers useful (and sometimes useless) advice'],
+  iquirk: ['is always warm to the touch', 'hums when near gold', 'smells of lavender', 'sometimes speaks in its creator’s voice', 'feels heavier when its owner lies'],
+  threat: ['An ancient seal beneath the capital is cracking', 'The sun has not risen in thirteen days', 'A plague of undeath spreads from the northern marshes', 'The last dragon has awoken, furious and grieving', 'Two kingdoms march toward a war engineered by a hidden hand', 'A god has been murdered', 'The Feywild is bleeding into the mortal world', 'A floating city is falling from the sky'],
+  stakes: ['only a forgotten prophecy explains how to stop it', 'the only people who believe it are outcasts and criminals', 'every faction wants to exploit it rather than stop it', 'its cause is tied to one of the heroes’ pasts', 'the heroes may have caused it by accident'],
+  start: ['as prisoners on a ship bound for a penal colony', 'as guests at a wedding that goes terribly wrong', 'as newly hired caravan guards', 'in a village on the edge of the wilds', 'in the aftermath of a disaster that levelled their town', 'as the only witnesses to a murder'],
+  comp: ['A sudden storm forces the party to take shelter somewhere unfamiliar.', 'An old enemy arrives with a proposition.', 'A trusted NPC is revealed to be a traitor.', 'The party’s gear is stolen in the night.', 'A rival group reaches the goal first.', 'A bystander is caught in the crossfire.', 'The bridge, road or tunnel ahead collapses.', 'A message arrives: someone the party cares about is in danger.', 'The authorities mistake the party for criminals.', 'A creature follows the party, watching but never attacking.'],
+};
+const GENS = {
+  npc: { title: 'NPC', icon: '🎭', make() {
+    const race = pick(RACES), name = nameFor(race), role = pick(T_.occ), look = pick(T_.look), pers = pick(T_.pers), want = pick(T_.want), secret = pick(T_.secret), quirk = pick(T_.quirk);
+    return { title: name, rows: [['Who', `${race} ${role}`], ['Look', look], ['Manner', `${pers}; ${quirk}`], ['Wants', want], ['Secret', secret]],
+      save: { type: 'npcs', data: { name, race, role: cap(role), appearance: cap(look) + '.', personality: `${cap(pers)}. ${cap(quirk)}.`, motivation: cap(want) + '.', secret: cap(secret) + '.', attitude: 'Neutral', status: 'Alive' } } };
+  } },
+  villain: { title: 'Villain', icon: '💀', make() {
+    const race = pick(RACES), name = `${nameFor(race).split(' ')[0]} ${pick(T_.epithet)}`, a = pick(T_.arche), g = pick(T_.vgoal), m = pick(T_.vmeth), w = pick(T_.vweak);
+    return { title: name, rows: [['Is', a], ['Wants', g], ['Methods', m], ['Weakness', w]],
+      save: { type: 'npcs', data: { name, role: cap(a), motivation: `${cap(g)}, ${m}.`, secret: `Weakness: ${w}.`, attitude: 'Hostile', status: 'Alive', tags: ['villain'] } } };
+  } },
+  hook: { title: 'Plot hook', icon: '📜', make() {
+    const p = pick(T_.patron), t = pick(T_.task), pl = pick(T_.place), tw = pick(T_.twist);
+    const hook = `${p} asks the party ${t} ${pl}.`;
+    const title = cap(pl.replace(/^(the|an|a) /, ''));
+    return { title, text: `${hook} ${tw}`,
+      save: { type: 'quests', data: { name: title, hook, complications: tw, status: 'Idea', kind: 'Side', giver: p.replace(/^(A|An|The) /, '') } } };
+  } },
+  tavern: { title: 'Tavern', icon: '🍺', make() {
+    const name = `The ${pick(T_.tadj)} ${pick(T_.tnoun)}`, f = pick(T_.tfeat), r = pick(T_.rumor);
+    return { title: name, rows: [['Notable', f], ['Rumor', r]],
+      save: { type: 'locations', data: { name, kind: 'Tavern / Shop', features: f, secrets: `Rumor overheard: ${r}` } } };
+  } },
+  settlement: { title: 'Settlement', icon: '🏘️', make() {
+    const name = pick(T_.spre) + pick(T_.ssuf), size = pick(['Village', 'Village', 'Town', 'Town', 'City']), k = pick(T_.known), p = pick(T_.problem);
+    return { title: name, rows: [['Size', size], ['Known for', k], ['Trouble', `Lately, ${p}.`]],
+      save: { type: 'locations', data: { name, kind: size, description: `A ${size.toLowerCase()} known for ${k}.`, secrets: `Lately, ${p}.` } } };
+  } },
+  item: { title: 'Magic item', icon: '💎', make() {
+    const name = `${pick(T_.iobj)} of ${pick(T_.iof)}`, pow = pick(T_.ipow), q = pick(T_.iquirk), rarity = pick(['Common', 'Uncommon', 'Uncommon', 'Rare', 'Rare', 'Very Rare']);
+    return { title: name, rows: [['Rarity', rarity], ['Power', `It ${pow}.`], ['Quirk', `It ${q}.`]],
+      save: { type: 'items', data: { name, rarity, description: `It ${pow}. It ${q}.`, kind: 'Wondrous item' } } };
+  } },
+  premise: { title: 'Campaign premise', icon: '✦', make() {
+    const text = `${pick(T_.threat)}, and ${pick(T_.stakes)}. The heroes begin ${pick(T_.start)}.`;
+    return { title: 'Premise', text, save: { type: 'pitch', data: text } };
+  } },
+  complication: { title: 'Complication', icon: '⚡', make() { return { title: 'Complication', text: pick(T_.comp) }; } },
+};
+const genResults = {};
+function genHTML(key) {
+  const r = genResults[key];
+  if (!r) return '<p class="blurb">Press generate for an idea.</p>';
+  return `<div class="gen-title">${esc(r.title)}</div>${r.text ? `<p style="margin:0">${esc(r.text)}</p>` : ''}${r.rows ? `<dl>${r.rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}`;
+}
+
+/* ---------- Tools page ---------- */
+function renderTools() {
+  main.innerHTML = `<div class="tools">
+    <div class="card"><h2>🎲 Dice roller</h2>
+      <div class="dice-btns">${['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100', '2d6'].map(d => `<button class="btn" data-roll="${d}">${d}</button>`).join('')}
+        <button class="btn wide" data-roll="2d20kh1" title="Roll 2d20, keep highest">Advantage</button>
+        <button class="btn wide" data-roll="2d20kl1" title="Roll 2d20, keep lowest">Disadvantage</button>
+        <button class="btn full" data-act="stats">Roll ability scores (4d6, drop lowest)</button></div>
+      <form id="rollForm" style="display:flex;gap:6px"><input type="text" id="rollExpr" placeholder="e.g. 2d6+3, 8d6, 4d6kh3" aria-label="Dice expression"><button class="btn primary">Roll</button></form>
+      <div class="roll-out" id="rollOut"><div class="roll-detail">Pick a die or type an expression.</div></div>
+      <ul class="history" id="history"></ul>
+    </div>
+    <div><h2 style="margin-bottom:12px">✦ Generators</h2>
+      <div class="gens">${Object.entries(GENS).map(([k, g]) => `<div class="card">
+        <h3>${g.icon} ${g.title}</h3>
+        <div class="gen-out" id="gen-${k}">${genHTML(k)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-gen="${k}">Generate</button>
+        ${k === 'complication' ? '' : `<button class="btn small" data-gensave="${k}" ${genResults[k] ? '' : 'disabled'}>${k === 'premise' ? 'Use as campaign pitch' : 'Save to campaign'}</button>`}</div>
+      </div>`).join('')}</div></div>
+  </div>`;
+  renderDice();
+}
+
+/* =========================================================
+   Actions
+   ========================================================= */
+function currentEnt() { const c = camp(); return TYPES[view.section] ? c.entities[view.section].find(e => e.id === view.sel) : null; }
+function createEntity(type, data = {}) {
+  const c = camp(), T = TYPES[type];
+  const e = { id: uid(), ...T.defaults?.(c), ...data };
+  if (!e.name) e.name = T.newName ? T.newName(e) : `New ${T.one.toLowerCase()}`;
+  c.entities[type].push(e); touch(c);
+  return e;
+}
+function newCampaignPrompt() {
+  const name = prompt('Name your campaign:', 'My new campaign');
+  if (name === null) return;
+  addCampaign({ id: uid(), name: name.trim() || 'Untitled campaign', created: Date.now() });
+  go('overview'); render();
+}
+function download(filename, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const slug = s => (s || 'campaign').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+function toMarkdown(c) {
+  const val = (f, v) => f.t === 'tags' ? (v || []).map(t => '#' + t).join(' ') : f.t === 'checkbox' ? (v ? 'Yes' : '') : String(v ?? '').trim();
+  let md = `# ${c.name}\n\n`;
+  for (const f of OV_FIELDS) { const v = val(f, c.overview[f.k]); if (v) md += `**${f.l}:** ${v.includes('\n') ? '\n\n' + v : v}\n\n`; }
+  for (const [k, T] of Object.entries(TYPES)) {
+    const list = [...c.entities[k]].sort(T.sort || ((a, b) => (a.name || '').localeCompare(b.name || '')));
+    if (!list.length) continue;
+    md += `\n## ${T.label}\n\n`;
+    for (const e of list) {
+      md += `### ${e.name || 'Untitled'}\n\n`;
+      for (const f of T.fields.slice(1)) {
+        if (f.t === 'monsters') {
+          if ((e.monsters || []).length) { const r = encCalc(c, e); md += `**Monsters** (${r.label}, ${r.adj} adjusted XP):\n\n${e.monsters.map(m => `- ${m.count}× ${m.name || 'Monster'} (CR ${m.cr})`).join('\n')}\n\n`; }
+          continue;
+        }
+        const v = val(f, e[f.k]);
+        if (v) md += f.t === 'textarea' ? `**${f.l}:**\n\n${v}\n\n` : `**${f.l}:** ${v}\n\n`;
+      }
+    }
+  }
+  return md.replace(/\[\[([^\]]+)\]\]/g, '$1');
+}
+
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-act],[data-roll],[data-gen],[data-gensave],[data-menu]');
+  if (!t) {
+    if (!ev.target.closest('#menu')) $('#menu').open = false;
+    if (!ev.target.closest('#sidebar,#menuToggle')) document.body.classList.remove('nav-open');
+    return;
+  }
+  const c = camp();
+  if (t.dataset.roll) return doRoll(t.dataset.roll);
+  if (t.dataset.gen) {
+    const k = t.dataset.gen; genResults[k] = GENS[k].make();
+    $(`#gen-${k}`).innerHTML = genHTML(k);
+    const sb = document.querySelector(`[data-gensave="${k}"]`); if (sb) sb.disabled = false;
+    return;
+  }
+  if (t.dataset.gensave) {
+    const r = genResults[t.dataset.gensave]; if (!r?.save) return;
+    if (r.save.type === 'pitch') {
+      if (c.overview.pitch && !confirm('Replace your current campaign pitch?')) return;
+      c.overview.pitch = r.save.data; touch(c); toast('Pitch saved to your overview'); return;
+    }
+    const e = createEntity(r.save.type, structuredClone(r.save.data));
+    renderNav(); toast(`Saved “${e.name}” to ${TYPES[r.save.type].label}`);
+    return;
+  }
+  if (t.dataset.menu) {
+    $('#menu').open = false;
+    const m = t.dataset.menu;
+    if (m === 'new') newCampaignPrompt();
+    else if (m === 'sample') { addCampaign(sampleCampaign()); go('overview'); render(); toast('Sample campaign added'); }
+    else if (m === 'import') $('#importFile').click();
+    else if (m === 'theme') { const dark = getComputedStyle(document.documentElement).colorScheme === 'dark'; db.theme = dark ? 'light' : 'dark'; save(); applyTheme(); }
+    else if (!c) toast('Create a campaign first');
+    else if (m === 'exportJson') download(`${slug(c.name)}.json`, JSON.stringify(c, null, 2), 'application/json');
+    else if (m === 'exportMd') download(`${slug(c.name)}.md`, toMarkdown(c), 'text/markdown');
+    else if (m === 'delete') {
+      if (!confirm(`Delete “${c.name}” and everything in it? This cannot be undone.\n\nTip: export a JSON backup first.`)) return;
+      db.campaigns = db.campaigns.filter(x => x.id !== c.id); db.currentId = db.campaigns[0]?.id ?? null; save(); go('overview'); render();
+    }
+    return;
+  }
+  const act = t.dataset.act;
+  if (t.tagName === 'SELECT') return; // selects act on change
+  switch (act) {
+    case 'newCamp': return newCampaignPrompt();
+    case 'sample': addCampaign(sampleCampaign()); go('overview'); return render();
+    case 'import': return $('#importFile').click();
+    case 'add': { const e = createEntity(view.section); return go(view.section, e.id); }
+    case 'addType': { const e = createEntity(t.dataset.type); return go(t.dataset.type, e.id); }
+    case 'dup': {
+      const e = currentEnt(); if (!e) return;
+      const copy = { ...structuredClone(e), id: uid(), name: `${e.name} (copy)` };
+      c.entities[view.section].push(copy); touch(c); return go(view.section, copy.id);
+    }
+    case 'del': {
+      const e = currentEnt(); if (!e || !confirm(`Delete “${e.name}”?`)) return;
+      c.entities[view.section] = c.entities[view.section].filter(x => x.id !== e.id); touch(c); return go(view.section);
+    }
+    case 'tag': view.tag = view.tag === t.dataset.tag ? null : t.dataset.tag; return renderList(c, view.section);
+    case 'addMonster': { const e = currentEnt(); e.monsters.push({ name: '', cr: '1', count: 1 }); touch(c); renderEditor(c, 'encounters', e); renderList(c, 'encounters'); document.querySelector(`[data-m="name"][data-i="${e.monsters.length - 1}"]`)?.focus(); return; }
+    case 'delMonster': { const e = currentEnt(); e.monsters.splice(+t.dataset.i, 1); touch(c); renderEditor(c, 'encounters', e); return renderList(c, 'encounters'); }
+    case 'stats': return rollStats();
+    case 'inspire': {
+      const text = GENS.premise.make().text;
+      if (c.overview.pitch?.trim() && !confirm(`Replace your pitch with this idea?\n\n${text}`)) return;
+      c.overview.pitch = text; touch(c); return renderOverview(c);
+    }
+    case 'mkVillain': { const e = createEntity('npcs', { name: c.overview.villain.trim(), attitude: 'Hostile', motivation: c.overview.villainGoal || '', tags: ['villain'] }); return go('npcs', e.id); }
+  }
+});
+
+main.addEventListener('input', ev => {
+  const t = ev.target, c = camp(); if (!c) return;
+  if (t.id === 'listSearch') { view.filter = t.value; return renderList(c, view.section); }
+  if (t.tagName === 'TEXTAREA') autosize(t);
+  if (t.dataset.ov) {
+    if (t.dataset.ov === '__name') { c.name = t.value; renderTop(); }
+    else c.overview[t.dataset.ov] = t.type === 'number' ? (t.value === '' ? '' : +t.value) : t.value;
+    return touch(c);
+  }
+  const e = currentEnt(); if (!e) return;
+  if (t.dataset.f) {
+    const k = t.dataset.f;
+    e[k] = t.type === 'checkbox' ? t.checked : t.type === 'number' ? (t.value === '' ? '' : +t.value) : t.dataset.tags ? t.value.split(',').map(s => s.trim()).filter(Boolean) : t.value;
+    touch(c);
+    if (view.section === 'encounters') renderEncCalc(c, e);
+    if (k !== 'tags') renderList(c, view.section);
+  } else if (t.dataset.m) {
+    const m = e.monsters[+t.dataset.i];
+    m[t.dataset.m] = t.dataset.m === 'count' ? Math.max(0, +t.value || 0) : t.value;
+    touch(c); renderEncCalc(c, e); renderList(c, view.section);
+  }
+});
+main.addEventListener('change', ev => {
+  const t = ev.target, c = camp(); if (!c) return;
+  if (t.dataset.act === 'createMention' && t.value) {
+    const type = t.value, name = t.dataset.name;
+    const e = createEntity(type, { name });
+    toast(`Created ${TYPES[type].one} “${name}”`);
+    return go(type, e.id);
+  }
+  if (t.dataset.ov) return renderOverviewSide(c);
+  const e = currentEnt();
+  if (e) { renderLinks(c, view.section, e); if (t.dataset.tags) renderList(c, view.section); renderNav(); }
+});
+main.addEventListener('submit', ev => {
+  if (ev.target.id === 'rollForm') { ev.preventDefault(); const v = $('#rollExpr').value; if (v.trim()) doRoll(v); }
+});
+
+$('#campaignSelect').addEventListener('change', ev => { db.currentId = ev.target.value; save(); view.filter = ''; view.tag = null; go('overview'); render(); });
+$('#globalSearch').addEventListener('input', ev => {
+  view.q = ev.target.value;
+  if (!camp()) return;
+  if (view.section !== 'search') go('search'); else renderSearch(camp());
+});
+$('#menuToggle').addEventListener('click', () => document.body.classList.toggle('nav-open'));
+$('#importFile').addEventListener('change', async ev => {
+  const file = ev.target.files[0]; ev.target.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const list = Array.isArray(data.campaigns) ? data.campaigns : [data];
+    if (!list.every(x => x && typeof x === 'object' && (x.entities || x.overview))) throw new Error('not a campaign');
+    list.forEach(x => { x.id = uid(); addCampaign(x); });
+    go('overview'); render(); toast(`Imported ${list.length} campaign${list.length > 1 ? 's' : ''}`);
+  } catch { toast('That file isn’t a Campaign Forge backup.'); }
+});
+
+/* =========================================================
+   Misc UI
+   ========================================================= */
+function autosize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 2, 600) + 'px'; }
+function autosizeAll() { main.querySelectorAll('textarea').forEach(autosize); }
+function fmtDate(d) { const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+let toastTimer;
+function toast(msg) {
+  let el = $('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 3000);
+}
+function applyTheme() { if (db.theme) document.documentElement.dataset.theme = db.theme; else delete document.documentElement.dataset.theme; }
+
+/* =========================================================
+   Sample campaign
+   ========================================================= */
+function sampleCampaign() {
+  const id = uid;
+  return {
+    id: id(), name: 'The Drowned Crown', created: Date.now(),
+    overview: {
+      pitch: 'When the tide goes out one night and never comes back, the people of the Saltreach discover a sunken kingdom — and a drowned king who wants his crown returned.',
+      setting: 'The Saltreach: a windswept coast of fishing towns, sea cliffs and smugglers’ coves.',
+      tone: 'Nautical mystery with creeping horror', themes: 'Greed vs. community; the past refusing to stay buried',
+      levelStart: 1, levelEnd: 8, villain: 'King Oruvel the Drowned',
+      villainGoal: 'Reclaim the [[The Tidecrown]] and raise his kingdom from the sea — drowning the Saltreach in the process.',
+      truths: '1. The sea gods have been silent for a hundred years.\n2. Every family in [[Gullhaven]] has lost someone to the sea.\n3. The old kingdom of Ys-Oruvel sank in a single night, and its name is considered bad luck.\n4. Smuggling is the Saltreach’s second-largest trade, and everyone knows it.',
+      safety: 'Lines: harm to children. Veils: drowning described in detail. X-card on the table.',
+    },
+    entities: {
+      pcs: [
+        { id: id(), name: 'Brenna Ashford', player: 'Sam', level: 2, race: 'Human', cls: 'Fighter', background: 'Sailor', hooks: 'Her father’s ship vanished on the reef twenty years ago.', tags: [] },
+        { id: id(), name: 'Pip Tealeaf', player: 'Alex', level: 2, race: 'Halfling', cls: 'Rogue', background: 'Criminal', hooks: 'Owes money to [[Captain Vex Redmane]].', tags: [] },
+        { id: id(), name: 'Sariel Moonwhisper', player: 'Jordan', level: 2, race: 'Elf', cls: 'Cleric', background: 'Acolyte', hooks: 'Hears a voice in the surf that calls her by a name she has never been given.', tags: [] },
+      ],
+      npcs: [
+        { id: id(), name: 'Mayor Hollis Crane', role: 'Mayor of Gullhaven', race: 'Human', location: 'Gullhaven', attitude: 'Wary', status: 'Alive', appearance: 'Thin, balding, always in a salt-stained coat of office.', personality: 'Nervous. Talks too fast when lying.', motivation: 'Keep the town calm and his own dealings hidden.', secret: 'Sold a map of the reef to [[The Black Gulls]].', tags: ['act 1'] },
+        { id: id(), name: 'Old Marta', role: 'Fortune teller', race: 'Human', location: 'Gullhaven', attitude: 'Friendly', status: 'Alive', personality: 'Speaks in riddles, cackles at her own jokes.', motivation: 'Warn the town before it’s too late.', secret: 'Is the last living descendant of the drowned royal line.', tags: ['act 1'] },
+        { id: id(), name: 'Captain Vex Redmane', role: 'Smuggler captain', race: 'Tiefling', location: 'Gullhaven', faction: 'The Black Gulls', attitude: 'Hostile', status: 'Alive', motivation: 'Loot the exposed reef before anyone else.', secret: 'Has already found a piece of [[The Tidecrown]].', tags: ['act 1'] },
+        { id: id(), name: 'King Oruvel the Drowned', role: 'Undead king of Ys-Oruvel', attitude: 'Hostile', status: 'Unknown', location: 'Temple of the Tide', motivation: 'Reclaim his crown and raise his kingdom.', secret: 'Cannot leave seawater for long.', tags: ['villain'] },
+      ],
+      locations: [
+        { id: id(), name: 'Gullhaven', kind: 'Town', region: 'The Saltreach', description: 'A fishing town of 600 souls clinging to the cliffs above a now-empty bay.', senses: 'Rotting kelp, crying gulls, bells from the chapel.', features: '- The Salty Anchor tavern\n- Harbormaster’s tower\n- [[Old Marta]]’s crooked hut', tags: ['act 1'] },
+        { id: id(), name: 'The Exposed Reef', kind: 'Wilderness', region: 'The Saltreach', description: 'Miles of newly exposed seabed, littered with wrecks and stranded sea creatures.', secrets: 'Some of the wrecks are far, far older than they should be.', tags: ['act 1'] },
+        { id: id(), name: 'Temple of the Tide', kind: 'Dungeon', region: 'The Exposed Reef', description: 'A barnacle-crusted temple rising from the mud where the deepest water used to be.', tags: ['act 2'] },
+      ],
+      factions: [
+        { id: id(), name: 'The Black Gulls', attitude: 'Rival', leader: 'Captain Vex Redmane', goals: 'Plunder the reef and sell relics to the highest bidder.', methods: 'Bribery, intimidation, fast boats.', clock: '2 / 6', tags: [] },
+        { id: id(), name: 'The Tidewardens', attitude: 'Friendly', leader: 'Sister Anwen', goals: 'Keep the old seals on the temple intact.', methods: 'Prayer, lore, quiet recruitment.', clock: '0 / 6', tags: [] },
+      ],
+      quests: [
+        { id: id(), name: 'Where Did the Sea Go?', status: 'Active', kind: 'Main', giver: 'Mayor Hollis Crane', location: 'The Exposed Reef', hook: 'The Mayor offers 50 gp to anyone who can find out what happened to the sea.', objectives: '- Explore [[The Exposed Reef]]\n- Find the source of the strange lights\n- Report back to the Mayor', reward: '50 gp and the town’s gratitude', tags: ['act 1'] },
+        { id: id(), name: 'The Smugglers’ Cache', status: 'Idea', kind: 'Side', giver: 'Old Marta', hook: 'Marta dreams of a cave full of stolen relics.', tags: [] },
+      ],
+      items: [
+        { id: id(), name: 'The Tidecrown', rarity: 'Artifact', kind: 'Crown', holder: 'Temple of the Tide', attune: true, description: 'A crown of black coral and pearl. Its wearer commands the tides.', tags: ['macguffin'] },
+        { id: id(), name: 'Gull-feather Charm', rarity: 'Uncommon', kind: 'Wondrous item', holder: 'Old Marta', description: 'Once per day, cast feather fall.', tags: [] },
+      ],
+      sessions: [
+        { id: id(), name: 'The Low Tide', number: 1, status: 'Planned', strong: 'The party wakes to frantic chapel bells at dawn: the sea has vanished overnight, leaving stranded ships and flopping fish across the bay.', scenes: '- Panic in the town square\n- [[Mayor Hollis Crane]] asks for volunteers\n- First steps onto the reef\n- Ambush by desperate sahuagin', clues: '- The water left at exactly midnight\n- The Mayor has been meeting smugglers\n- The temple bell rang underwater before the sea retreated\n- [[Old Marta]] predicted this years ago', npcsLocs: '[[Gullhaven]], [[The Exposed Reef]], [[Reef Ambush]]', rewards: 'A pearl worth 25 gp; a waterlogged journal', tags: ['act 1'] },
+      ],
+      encounters: [
+        { id: id(), name: 'Reef Ambush', kind: 'Combat', location: 'The Exposed Reef', monsters: [{ name: 'Sahuagin', cr: '1/2', count: 2 }, { name: 'Giant Crab', cr: '1/8', count: 2 }], useParty: true, partySize: 3, partyLevel: 2, setup: 'Slippery rocks (difficult terrain), tide pools, a stranded fishing boat for cover.', tactics: 'Crabs grapple from the pools; sahuagin flee if two of them fall.', treasure: 'Coral knife, 12 sp', tags: ['act 1'] },
+      ],
+    },
+  };
+}
+
+/* =========================================================
+   Boot
+   ========================================================= */
+load();
+parseHash();
+render();
+</script>
+</body>
+</html>
