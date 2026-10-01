@@ -208,6 +208,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .welcome p { color: var(--muted); font-size: 1.05rem; }
 .welcome .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
 
+.modal-back { position: fixed; inset: 0; z-index: 200; background: rgba(20, 14, 8, .5); display: grid; place-items: center; padding: 16px; }
+.modal { width: 100%; max-width: 480px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.modal h2 { margin-bottom: 10px; }
+.modal-msg { white-space: pre-line; color: var(--muted); margin: 0 0 12px; }
+.modal .input { margin-bottom: 14px; }
+.modal-btns { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.modal-danger { background: var(--bad); border-color: var(--bad); }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; z-index: 100; box-shadow: var(--shadow); }
 .only-narrow { display: none !important; }
 
@@ -965,13 +972,13 @@ function applyPremise(c, e) {
   o.notes = [`Central question: ${e.question}`, `Arc: ${e.acts}`, `Inspired by: ${e.src}`, o.notes].filter(Boolean).join('\n\n');
   touch(c);
 }
-function saveCodex(c, e) {
+async function saveCodex(c, e) {
   const tags = [...e.t];
   const src = `Source: ${e.src}`;
   let type, data;
   switch (e.c) {
     case 'premise':
-      if ((c.overview.pitch || '').trim() && !confirm(`Use “${e.name}” as this campaign’s premise? It replaces the pitch, themes, tone and villain (your notes are kept).`)) return;
+      if ((c.overview.pitch || '').trim() && !(await ask({ title: `Use “${e.name}”?`, message: 'This replaces your pitch, themes, tone and villain. Your notes are kept.', ok: 'Use this premise' }))) return;
       applyPremise(c, e); toast(`“${e.name}” is now your campaign premise`); return go('overview');
     case 'journey': type = 'quests'; data = { kind: 'Personal', status: 'Idea', hook: e.trigger, objectives: e.trial, complications: e.paths, reward: e.mark, notes: `${e.thinker}: ${e.idea}\n\n${src}` }; break;
     case 'villain': type = 'npcs'; data = { role: e.role, attitude: 'Hostile', status: 'Alive', motivation: e.worldview, personality: `First sign: ${e.tell}`, secret: e.flaw, notes: `What they get right: ${e.truth}\n\nRedemption: ${e.redemption}\n\n${src}`, tags: [...tags, 'villain'] }; break;
@@ -999,8 +1006,8 @@ function createEntity(type, data = {}) {
   c.entities[type].push(e); touch(c);
   return e;
 }
-function newCampaignPrompt() {
-  const name = prompt('Name your campaign:', 'My new campaign');
+async function newCampaignPrompt() {
+  const name = await ask({ title: 'Start a new campaign', message: 'What should it be called? You can change this later.', input: 'My new campaign', ok: 'Create campaign' });
   if (name === null) return;
   addCampaign({ id: uid(), name: name.trim() || 'Untitled campaign', created: Date.now() });
   go('overview'); render();
@@ -1035,7 +1042,7 @@ function toMarkdown(c) {
   return md.replace(/\[\[([^\]]+)\]\]/g, '$1');
 }
 
-document.addEventListener('click', ev => {
+document.addEventListener('click', async ev => {
   const t = ev.target.closest('[data-act],[data-roll],[data-gen],[data-gensave],[data-menu]');
   if (!t) {
     if (!ev.target.closest('#menu')) $('#menu').open = false;
@@ -1069,7 +1076,7 @@ document.addEventListener('click', ev => {
     else if (m === 'exportJson') download(`${slug(c.name)}.json`, JSON.stringify(c, null, 2), 'application/json');
     else if (m === 'exportMd') download(`${slug(c.name)}.md`, toMarkdown(c), 'text/markdown');
     else if (m === 'delete') {
-      if (!confirm(`Delete “${c.name}” and everything in it? This cannot be undone.\n\nTip: export a JSON backup first.`)) return;
+      if (!(await ask({ title: `Delete “${c.name}”?`, message: 'Everything in this campaign will be deleted. This cannot be undone.\n\nTip: export a JSON backup first (⋯ menu).', ok: 'Delete campaign', danger: true }))) return;
       db.campaigns = db.campaigns.filter(x => x.id !== c.id); db.currentId = db.campaigns[0]?.id ?? null; save(); go('overview'); render();
     }
     return;
@@ -1088,7 +1095,7 @@ document.addEventListener('click', ev => {
       c.entities[view.section].push(copy); touch(c); return go(view.section, copy.id);
     }
     case 'del': {
-      const e = currentEnt(); if (!e || !confirm(`Delete “${e.name}”?`)) return;
+      const e = currentEnt(); if (!e || !(await ask({ title: `Delete “${e.name}”?`, message: 'This cannot be undone.', ok: 'Delete', danger: true }))) return;
       c.entities[view.section] = c.entities[view.section].filter(x => x.id !== e.id); touch(c); return go(view.section);
     }
     case 'tag': view.tag = view.tag === t.dataset.tag ? null : t.dataset.tag; return renderList(c, view.section);
@@ -1097,7 +1104,7 @@ document.addEventListener('click', ev => {
     case 'stats': return rollStats();
     case 'inspire': {
       const e = drawCodex('premise');
-      if (!confirm(`${e.name}\n\n${e.pitch}\n\nCentral question: ${e.question}\n\nUse this premise for your campaign? It fills in the pitch, themes, tone and villain (your notes are kept).`)) return;
+      if (!(await ask({ title: e.name, message: `${e.pitch}\n\nCentral question: ${e.question}\n\nUse this premise? It fills in your pitch, themes, tone and villain. Your notes are kept.`, ok: 'Use this premise' }))) return;
       applyPremise(c, e); return renderOverview(c);
     }
     case 'cxCat': view.cx.cat = t.dataset.cat; view.cx.drawn = null; return renderCodex(c);
@@ -1180,6 +1187,34 @@ $('#importFile').addEventListener('change', async ev => {
 function autosize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 2, 600) + 'px'; }
 function autosizeAll() { main.querySelectorAll('textarea').forEach(autosize); }
 function fmtDate(d) { const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+// In-app dialog. Browser prompt()/confirm() are silently blocked in many in-app and mobile browsers.
+// Resolves to the typed text (input dialogs), true (confirm), or null when cancelled.
+function ask({ title, message = '', input = null, ok = 'OK', danger = false }) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.className = 'modal-back';
+    back.innerHTML = `<div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">${esc(title)}</h2>
+      ${message ? `<p class="modal-msg">${esc(message)}</p>` : ''}
+      ${input !== null ? `<input type="text" class="input" id="modalInput" value="${esc(input)}" aria-label="${esc(title)}">` : ''}
+      <div class="modal-btns"><button class="btn ghost" data-modal="cancel">Cancel</button>
+        <button class="btn primary ${danger ? 'modal-danger' : ''}" data-modal="ok">${esc(ok)}</button></div></div>`;
+    const done = val => { back.remove(); document.removeEventListener('keydown', onKey, true); resolve(val); };
+    const okVal = () => input !== null ? back.querySelector('#modalInput').value : true;
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done(null); }
+      else if (e.key === 'Enter' && (input !== null || e.target === back.querySelector('[data-modal=ok]'))) { e.preventDefault(); done(okVal()); }
+    };
+    back.addEventListener('click', e => {
+      if (e.target === back || e.target.closest('[data-modal=cancel]')) done(null);
+      else if (e.target.closest('[data-modal=ok]')) done(okVal());
+    });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(back);
+    const field = back.querySelector('#modalInput');
+    if (field) { field.focus(); field.select(); } else back.querySelector('[data-modal=ok]').focus();
+  });
+}
 let toastTimer;
 function toast(msg) {
   let el = $('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
