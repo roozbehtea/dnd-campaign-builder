@@ -490,14 +490,19 @@ function load() {
   if (!db.campaigns.some(c => c.id === db.currentId)) db.currentId = db.campaigns[0]?.id ?? null;
 }
 let saveTimer;
+function writeNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  try { localStorage.setItem(KEY, JSON.stringify(db)); $('#saved').textContent = 'Saved ✓'; }
+  catch { $('#saved').textContent = 'Not saved'; toast('Could not save — browser storage is full or blocked. Export a backup!'); }
+}
 function save() {
   clearTimeout(saveTimer);
   $('#saved').textContent = 'Saving…';
-  saveTimer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); $('#saved').textContent = 'Saved ✓'; }
-    catch { $('#saved').textContent = 'Not saved'; toast('Could not save — browser storage is full or blocked. Export a backup!'); }
-  }, 300);
+  saveTimer = setTimeout(writeNow, 300);
 }
+// Flush a pending save when the page is hidden or closed, so the last keystrokes are never lost.
+window.addEventListener('pagehide', () => { if (saveTimer) writeNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) writeNow(); });
 function ensure(c) {
   c.id ||= uid(); c.name ||= 'Untitled campaign'; c.overview ||= {}; c.entities ||= {};
   for (const k in TYPES) if (!Array.isArray(c.entities[k])) c.entities[k] = [];
@@ -571,9 +576,9 @@ function renderWelcome() {
 /* ---------- Overview ---------- */
 const OV_FIELDS = [
   { k: 'pitch', l: 'Campaign pitch', t: 'textarea', rows: 3, ph: 'One or two sentences: what is this campaign about?' },
-  { k: 'setting', l: 'Setting', t: 'text', ph: 'World, region or city where it takes place' },
-  { k: 'tone', l: 'Tone', t: 'text', half: 1, ph: 'Heroic, grim, comedic, horror…' },
-  { k: 'themes', l: 'Themes', t: 'text', half: 1, ph: 'Redemption, power, family…' },
+  { k: 'setting', l: 'Setting', t: 'textarea', rows: 2, ph: 'World, region or city where it takes place' },
+  { k: 'tone', l: 'Tone', t: 'textarea', rows: 2, ph: 'Heroic, grim, comedic, horror…' },
+  { k: 'themes', l: 'Themes', t: 'textarea', rows: 2, ph: 'Redemption, power, family…' },
   { k: 'levelStart', l: 'Starting level', t: 'number', half: 1, min: 1, max: 20 },
   { k: 'levelEnd', l: 'Ending level', t: 'number', half: 1, min: 1, max: 20 },
   { k: 'villain', l: 'Main villain / central threat', t: 'text', ref: 1 },
