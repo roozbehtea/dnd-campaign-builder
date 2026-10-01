@@ -74,6 +74,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 /* Layout */
 .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 57px); }
 .sidebar { border-right: 1px solid var(--line); padding: 14px 10px; background: var(--surface-2); position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto; }
+.side-camp { padding: 4px 10px 12px; margin-bottom: 6px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.side-camp-name { font-family: Cinzel, Georgia, serif; font-weight: 700; line-height: 1.25; }
 .nav-group { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 10px 4px; }
 .nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--ink); text-decoration: none; }
 .nav a:hover { background: var(--surface); }
@@ -265,6 +267,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
       <hr>
       <button data-menu="theme">◐ Toggle light / dark</button>
       <button data-menu="delete" style="color:var(--bad)">✕ Delete this campaign</button>
+      <button data-menu="reset" style="color:var(--bad)">⟲ Start over (delete all campaigns)</button>
     </div>
   </details>
 </header>
@@ -541,6 +544,7 @@ function renderTop() {
   const sel = $('#campaignSelect');
   sel.innerHTML = db.campaigns.length
     ? db.campaigns.map(c => `<option value="${c.id}" ${c.id === db.currentId ? 'selected' : ''}>${esc(c.name)}</option>`).join('')
+      + '<option value="__new">＋ New campaign…</option>'
     : '<option>No campaigns yet</option>';
   sel.disabled = !db.campaigns.length;
 }
@@ -550,7 +554,8 @@ function renderNav() {
   if (!c) { setHTML($('#sidebar'), ''); return; }
   const link = (sec, icon, label, count) => `<a href="#/${sec}" class="${view.section === sec ? 'active' : ''}"><span>${icon}</span>${label}${count != null ? `<span class="count">${count}</span>` : ''}</a>`;
   const typeLinks = g => Object.entries(TYPES).filter(([, T]) => T.group === g).map(([k, T]) => link(k, T.icon, T.label, c.entities[k].length)).join('');
-  setHTML($('#sidebar'), link('overview', '🗺️', 'Overview')
+  setHTML($('#sidebar'), `<div class="side-camp"><div class="kicker">Campaign</div><div class="side-camp-name">${esc(c.name)}</div>
+      <button class="btn small" data-act="newCamp">＋ New campaign</button></div>` + link('overview', '🗺️', 'Overview')
     + '<div class="nav-group">World & story</div>' + typeLinks('world')
     + '<div class="nav-group">At the table</div>' + typeLinks('table')
     + '<div class="nav-group">Inspiration</div>' + link('codex', '📚', 'Mythic Codex') + link('tools', '🎲', 'Dice & generators'));
@@ -1072,6 +1077,11 @@ document.addEventListener('click', async ev => {
     else if (m === 'sample') { addCampaign(sampleCampaign()); go('overview'); render(); toast('Sample campaign added'); }
     else if (m === 'import') $('#importFile').click();
     else if (m === 'theme') { const dark = getComputedStyle(document.documentElement).colorScheme === 'dark'; db.theme = dark ? 'light' : 'dark'; save(); applyTheme(); }
+    else if (m === 'reset') {
+      if (!db.campaigns.length) return toast('There is nothing to delete.');
+      if (!(await ask({ title: 'Start over?', message: `This deletes all ${db.campaigns.length} campaign${db.campaigns.length > 1 ? 's' : ''} saved in this browser. This cannot be undone.\n\nTip: export a JSON backup of anything you want to keep first.`, ok: 'Delete everything', danger: true }))) return;
+      db.campaigns = []; db.currentId = null; writeNow(); go('overview'); render(); toast('All campaigns deleted. Start fresh!');
+    }
     else if (!c) toast('Create a campaign first');
     else if (m === 'exportJson') download(`${slug(c.name)}.json`, JSON.stringify(c, null, 2), 'application/json');
     else if (m === 'exportMd') download(`${slug(c.name)}.md`, toMarkdown(c), 'text/markdown');
@@ -1162,7 +1172,10 @@ main.addEventListener('submit', ev => {
   if (ev.target.id === 'rollForm') { ev.preventDefault(); const v = $('#rollExpr').value; if (v.trim()) doRoll(v); }
 });
 
-$('#campaignSelect').addEventListener('change', ev => { db.currentId = ev.target.value; save(); view.filter = ''; view.tag = null; go('overview'); render(); });
+$('#campaignSelect').addEventListener('change', ev => {
+  if (ev.target.value === '__new') { ev.target.value = db.currentId; return newCampaignPrompt(); }
+  db.currentId = ev.target.value; save(); view.filter = ''; view.tag = null; go('overview'); render();
+});
 $('#globalSearch').addEventListener('input', ev => {
   view.q = ev.target.value;
   if (!camp()) return;
