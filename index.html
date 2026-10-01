@@ -288,6 +288,8 @@ const $ = s => document.querySelector(s);
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pick = a => a[Math.floor(Math.random() * a.length)];
+// JSON deep copy: structuredClone is missing from Safari before iOS 15.4.
+const clone = o => JSON.parse(JSON.stringify(o));
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 const main = $('#main');
 // Only touch the DOM when markup changed, so a blur-triggered refresh never swaps out an element mid-click.
@@ -987,7 +989,7 @@ async function saveCodex(c, e) {
       applyPremise(c, e); toast(`“${e.name}” is now your campaign premise`); return go('overview');
     case 'journey': type = 'quests'; data = { kind: 'Personal', status: 'Idea', hook: e.trigger, objectives: e.trial, complications: e.paths, reward: e.mark, notes: `${e.thinker}: ${e.idea}\n\n${src}` }; break;
     case 'villain': type = 'npcs'; data = { role: e.role, attitude: 'Hostile', status: 'Alive', motivation: e.worldview, personality: `First sign: ${e.tell}`, secret: e.flaw, notes: `What they get right: ${e.truth}\n\nRedemption: ${e.redemption}\n\n${src}`, tags: [...tags, 'villain'] }; break;
-    case 'monster': type = 'encounters'; data = { kind: 'Combat', monsters: structuredClone(e.monsters || []), setup: e.lair, tactics: e.tactics, notes: `${e.lore}\n\nWhat it embodies: ${e.meaning}\n\n5e stats: ${e.stats}\n\nAnother way: ${e.mercy}\n\n${src}` }; break;
+    case 'monster': type = 'encounters'; data = { kind: 'Combat', monsters: clone(e.monsters || []), setup: e.lair, tactics: e.tactics, notes: `${e.lore}\n\nWhat it embodies: ${e.meaning}\n\n5e stats: ${e.stats}\n\nAnother way: ${e.mercy}\n\n${src}` }; break;
     case 'god': type = 'npcs'; data = { role: `Deity: ${e.domain}`, attitude: 'Neutral', status: 'Alive', motivation: e.wants, personality: `Omen: ${e.omen}`, secret: `Price: ${e.price}`, notes: `Boon: ${e.boon}\n\nCleric domains: ${e.domains}\n\n${src}`, tags: [...tags, 'god'] }; break;
     case 'sage': type = 'npcs'; data = { role: e.role, attitude: 'Friendly', status: 'Alive', personality: `Teaching: ${e.teaching}`, motivation: `Test: ${e.test}`, secret: e.flaw, notes: `Gift: ${e.gift}\n\n${src}`, tags: [...tags, 'mentor'] }; break;
     case 'dilemma': type = 'encounters'; data = { kind: 'Social', monsters: [], setup: e.situation, tactics: `Stakes: ${e.stakes}`, notes: `Lenses: ${e.lenses}\n\nOutcomes: ${e.outcomes}\n\n${src}` }; break;
@@ -1064,7 +1066,7 @@ document.addEventListener('click', async ev => {
   }
   if (t.dataset.gensave) {
     const sv = genResults[t.dataset.gensave]?.saves?.[+t.dataset.si]; if (!sv || !c) return;
-    const made = sv.items.map(it => ({ type: it.type, e: createEntity(it.type, structuredClone(it.data)) }));
+    const made = sv.items.map(it => ({ type: it.type, e: createEntity(it.type, clone(it.data)) }));
     renderNav();
     toast(made.length === 1 ? `Added “${made[0].e.name}” to ${TYPES[made[0].type].label}` : `Added ${made.length} records: ${[...new Set(made.map(m => TYPES[m.type].label))].join(', ')}`);
     t.disabled = true; t.textContent = '✓ Saved';
@@ -1101,7 +1103,7 @@ document.addEventListener('click', async ev => {
     case 'addType': { const e = createEntity(t.dataset.type); return go(t.dataset.type, e.id); }
     case 'dup': {
       const e = currentEnt(); if (!e) return;
-      const copy = { ...structuredClone(e), id: uid(), name: `${e.name} (copy)` };
+      const copy = { ...clone(e), id: uid(), name: `${e.name} (copy)` };
       c.entities[view.section].push(copy); touch(c); return go(view.section, copy.id);
     }
     case 'del': {
