@@ -172,6 +172,35 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .gen-out dt { color: var(--muted); font-size: .8rem; font-weight: 600; }
 .gen-out dd { margin: 0; }
 .gen-title { font-weight: 700; font-size: 1.02rem; margin-bottom: 6px; }
+.gen-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.gen-head h2 { margin: 0; }
+.gen-culture { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: var(--muted); }
+.gen-culture select { width: auto; }
+.gen-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gen-card-head h3 { margin: 0; }
+.gen-opt { width: auto; padding: 4px 8px; font-size: .85rem; }
+.gen-wide { grid-column: 1 / -1; }
+.gen-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.gen-sec { margin-top: 10px; }
+.gen-sec ol { margin: 4px 0 0; padding-left: 20px; }
+.gen-sec li { margin: 3px 0; }
+
+/* Codex */
+.cx-head { margin-bottom: 12px; }
+.cx-bar { display: flex; flex-direction: column; gap: 10px; }
+.cx-tools { display: flex; gap: 8px; max-width: 640px; }
+.cx-count { opacity: .65; font-size: .72rem; margin-left: 2px; }
+.cx-grid { columns: 380px; column-gap: 16px; }
+.cx-card { break-inside: avoid; margin-bottom: 16px; display: block; }
+.cx-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+.cx-trads { display: flex; gap: 4px; flex-wrap: wrap; }
+.cx-name { font-size: 1.15rem; margin: 8px 0 2px; }
+.cx-src { font-size: .8rem; color: var(--muted); font-style: italic; margin-bottom: 10px; }
+.cx-dl { margin: 0 0 12px; display: grid; gap: 2px; font-size: .9rem; }
+.cx-dl dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; margin-top: 8px; }
+.cx-dl dd { margin: 0; }
+.cx-drawn-wrap { max-width: 760px; margin-bottom: 20px; }
+.cx-drawn { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold), var(--shadow); }
 
 /* Welcome */
 .welcome { max-width: 640px; margin: 8vh auto; text-align: center; }
@@ -179,6 +208,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 .welcome p { color: var(--muted); font-size: 1.05rem; }
 .welcome .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
 
+.modal-back { position: fixed; inset: 0; z-index: 200; background: rgba(20, 14, 8, .5); display: grid; place-items: center; padding: 16px; }
+.modal { width: 100%; max-width: 480px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.modal h2 { margin-bottom: 10px; }
+.modal-msg { white-space: pre-line; color: var(--muted); margin: 0 0 12px; }
+.modal .input { margin-bottom: 14px; }
+.modal-btns { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.modal-danger { background: var(--bad); border-color: var(--bad); }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; z-index: 100; box-shadow: var(--shadow); }
 .only-narrow { display: none !important; }
 
@@ -202,6 +238,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
   .saved { display: none; }
   .brand-text { display: none; }
   .stats { grid-template-columns: repeat(2, 1fr); }
+  .cx-grid { columns: 1; }
+  .cx-tools { flex-direction: column; }
   .form { grid-template-columns: 1fr; }
   .field.half { grid-column: 1 / -1; }
   .mon-row { grid-template-columns: 1fr 76px 60px auto; }
@@ -236,6 +274,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid color-mix(in srgb
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
+<script src="codex.js"></script>
+<script src="generators.js"></script>
 <script>
 'use strict';
 /* =========================================================
@@ -412,7 +452,7 @@ const TYPES = {
     },
   },
 };
-const SECTION_ORDER = ['overview', 'pcs', 'npcs', 'locations', 'factions', 'quests', 'items', 'sessions', 'encounters', 'tools'];
+const SECTION_ORDER = ['overview', 'pcs', 'npcs', 'locations', 'factions', 'quests', 'items', 'sessions', 'encounters', 'codex', 'tools'];
 
 /* =========================================================
    Encounter math (D&D 5e DMG)
@@ -457,14 +497,19 @@ function load() {
   if (!db.campaigns.some(c => c.id === db.currentId)) db.currentId = db.campaigns[0]?.id ?? null;
 }
 let saveTimer;
+function writeNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  try { localStorage.setItem(KEY, JSON.stringify(db)); $('#saved').textContent = 'Saved ✓'; }
+  catch { $('#saved').textContent = 'Not saved'; toast('Could not save — browser storage is full or blocked. Export a backup!'); }
+}
 function save() {
   clearTimeout(saveTimer);
   $('#saved').textContent = 'Saving…';
-  saveTimer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(db)); $('#saved').textContent = 'Saved ✓'; }
-    catch { $('#saved').textContent = 'Not saved'; toast('Could not save — browser storage is full or blocked. Export a backup!'); }
-  }, 300);
+  saveTimer = setTimeout(writeNow, 300);
 }
+// Flush a pending save when the page is hidden or closed, so the last keystrokes are never lost.
+window.addEventListener('pagehide', () => { if (saveTimer) writeNow(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveTimer) writeNow(); });
 function ensure(c) {
   c.id ||= uid(); c.name ||= 'Untitled campaign'; c.overview ||= {}; c.entities ||= {};
   for (const k in TYPES) if (!Array.isArray(c.entities[k])) c.entities[k] = [];
@@ -477,7 +522,7 @@ function addCampaign(c) { ensure(c); db.campaigns.push(c); db.currentId = c.id; 
 /* =========================================================
    Routing  (#/section/id)
    ========================================================= */
-let view = { section: 'overview', sel: null, filter: '', tag: null, q: '' };
+let view = { section: 'overview', sel: null, filter: '', tag: null, q: '', cx: { cat: 'premise', trad: '', q: '', drawn: null } };
 function go(section, id) { location.hash = `#/${section}${id ? '/' + id : ''}`; }
 function parseHash() {
   const [, section = 'overview', id = null] = location.hash.split('/');
@@ -507,7 +552,8 @@ function renderNav() {
   const typeLinks = g => Object.entries(TYPES).filter(([, T]) => T.group === g).map(([k, T]) => link(k, T.icon, T.label, c.entities[k].length)).join('');
   setHTML($('#sidebar'), link('overview', '🗺️', 'Overview')
     + '<div class="nav-group">World & story</div>' + typeLinks('world')
-    + '<div class="nav-group">At the table</div>' + typeLinks('table') + link('tools', '🎲', 'Dice & generators'));
+    + '<div class="nav-group">At the table</div>' + typeLinks('table')
+    + '<div class="nav-group">Inspiration</div>' + link('codex', '📚', 'Mythic Codex') + link('tools', '🎲', 'Dice & generators'));
 }
 
 function renderMain() {
@@ -515,6 +561,7 @@ function renderMain() {
   if (!c) return renderWelcome();
   if (view.section === 'overview') renderOverview(c);
   else if (view.section === 'tools') renderTools(c);
+  else if (view.section === 'codex') renderCodex(c);
   else if (view.section === 'search') renderSearch(c);
   else renderSection(c, view.section);
 }
@@ -536,9 +583,9 @@ function renderWelcome() {
 /* ---------- Overview ---------- */
 const OV_FIELDS = [
   { k: 'pitch', l: 'Campaign pitch', t: 'textarea', rows: 3, ph: 'One or two sentences: what is this campaign about?' },
-  { k: 'setting', l: 'Setting', t: 'text', ph: 'World, region or city where it takes place' },
-  { k: 'tone', l: 'Tone', t: 'text', half: 1, ph: 'Heroic, grim, comedic, horror…' },
-  { k: 'themes', l: 'Themes', t: 'text', half: 1, ph: 'Redemption, power, family…' },
+  { k: 'setting', l: 'Setting', t: 'textarea', rows: 2, ph: 'World, region or city where it takes place' },
+  { k: 'tone', l: 'Tone', t: 'textarea', rows: 2, ph: 'Heroic, grim, comedic, horror…' },
+  { k: 'themes', l: 'Themes', t: 'textarea', rows: 2, ph: 'Redemption, power, family…' },
   { k: 'levelStart', l: 'Starting level', t: 'number', half: 1, min: 1, max: 20 },
   { k: 'levelEnd', l: 'Ending level', t: 'number', half: 1, min: 1, max: 20 },
   { k: 'villain', l: 'Main villain / central threat', t: 'text', ref: 1 },
@@ -806,99 +853,27 @@ function rollStats() {
 /* =========================================================
    Generators
    ========================================================= */
-const NAMES = {
-  Human: [['Aldric', 'Brenna', 'Cedric', 'Dara', 'Edwin', 'Freya', 'Gideon', 'Hilda', 'Isolde', 'Jasper', 'Kaelen', 'Liora', 'Marek', 'Nessa', 'Osric', 'Perrin', 'Rowena', 'Silas', 'Tamsin', 'Ulric', 'Vera', 'Wystan', 'Yara', 'Corin'], ['Ashford', 'Blackwood', 'Crane', 'Dunmore', 'Fairwind', 'Greaves', 'Hollow', 'Ironside', 'Kettle', 'Lark', 'Marsh', 'Pike', 'Redmane', 'Stone', 'Thorne', 'Vale']],
-  Dwarf: [['Borin', 'Dagna', 'Eldrek', 'Gunnhild', 'Harbek', 'Kathra', 'Morgran', 'Rurik', 'Torga', 'Vistra', 'Brottor', 'Helja'], ['Ironfist', 'Stonebeard', 'Deepdelver', 'Coppervein', 'Anvilborn', 'Flintheart', 'Granitehand']],
-  Elf: [['Aelar', 'Caelynn', 'Erevan', 'Ielenia', 'Lianthorn', 'Naivara', 'Quarion', 'Sariel', 'Thamior', 'Valanthe', 'Mialee', 'Theren'], ['Amakiir', 'Galanodel', 'Liadon', 'Moonwhisper', 'Siannodel', 'Starbloom', 'Nightbreeze']],
-  Halfling: [['Cade', 'Lidda', 'Merric', 'Seraphina', 'Roscoe', 'Verna', 'Pip', 'Bree', 'Milo', 'Poppy'], ['Brushgather', 'Goodbarrel', 'Tealeaf', 'Underbough', 'Tosscobble', 'Greenbottle']],
-  Gnome: [['Alston', 'Bimpnottin', 'Dimble', 'Ellyjobell', 'Fonkin', 'Orla', 'Zook', 'Nissa', 'Wrenn'], ['Beren', 'Daergel', 'Garrick', 'Nackle', 'Turen', 'Sprocketwhistle']],
-  'Half-Orc': [['Dench', 'Gell', 'Holg', 'Krusk', 'Baggi', 'Emen', 'Ovak', 'Shautha', 'Yevelda', 'Thokk'], ['the Unbowed', 'Skullsplitter', 'of the Red Tusk', 'Ironjaw', 'the Quiet']],
-  Tiefling: [['Akmenos', 'Damakos', 'Kallista', 'Mordai', 'Orianna', 'Rieta', 'Hope', 'Torment', 'Ash', 'Sorrow', 'Ember', 'Vesper'], ['', '', 'Vane', 'Kaziel', 'Nightshade']],
-  Dragonborn: [['Arjhan', 'Donaar', 'Kriv', 'Medrash', 'Sora', 'Harann', 'Thava', 'Biri', 'Nala'], ['Clethtinthiallor', 'Kerrhylon', 'Myastan', 'Yarjerit', 'Delmirev']],
-};
-const RACES = ['Human', 'Human', 'Human', 'Dwarf', 'Elf', 'Halfling', 'Gnome', 'Half-Orc', 'Tiefling', 'Dragonborn', 'Half-Elf'];
-function nameFor(race) {
-  if (race === 'Half-Elf') return `${pick(pick([NAMES.Human, NAMES.Elf])[0])} ${pick(NAMES.Human[1])}`;
-  const [f, l] = NAMES[race] || NAMES.Human;
-  return `${pick(f)} ${pick(l)}`.trim();
+const GEN = window.GENERATORS || { cultures: { classic: { label: 'Classic fantasy' } }, gens: {} };
+const GENS = GEN.gens;
+const genResults = {}, genOpts = {};
+let genCulture = 'any';
+function genContext(key) {
+  const c = camp(), pcs = c ? c.entities.pcs : [];
+  const level = pcs.length ? Math.max(1, Math.min(20, Math.round(pcs.reduce((s, p) => s + (+p.level || 1), 0) / pcs.length))) : 1;
+  const cultures = Object.keys(GEN.cultures);
+  return { culture: genCulture === 'any' ? pick(cultures) : genCulture, level, opt: genOpts[key], codex: CX };
 }
-const T_ = {
-  occ: ['blacksmith', 'innkeeper', 'priest of a minor god', 'disgraced knight', 'smuggler', 'herbalist', 'guard captain', 'traveling merchant', 'scholar', 'grave keeper', 'fortune teller', 'bounty hunter', 'noble’s steward', 'ferryman', 'retired adventurer', 'alchemist', 'bard', 'fence for the thieves’ guild', 'cartographer', 'hedge witch'],
-  look: ['a jagged scar across one cheek', 'ink-stained fingers', 'an eyepatch embroidered with gold thread', 'braided silver hair', 'a nervous twitch', 'immaculate, expensive clothing', 'two missing fingers on the left hand', 'freckles and a gap-toothed grin', 'a towering, broad-shouldered frame', 'a tiny, wiry build', 'the faint smell of smoke', 'tattoos of old sailing charts', 'gloves they never take off', 'a cane carved like a serpent'],
-  pers: ['suspicious of strangers', 'relentlessly cheerful', 'blunt to the point of rudeness', 'a compulsive liar', 'fiercely loyal', 'greedy but honest about it', 'melancholy and poetic', 'nervous and eager to please', 'arrogant', 'kind but world-weary', 'curious about everything', 'quick to anger, quicker to forgive'],
-  want: ['to pay off a crushing debt', 'revenge on whoever ruined their family', 'to be remembered after they die', 'to protect a younger sibling', 'to find a legendary lost relic', 'to escape their past', 'respect from the local nobility', 'a cure for a mysterious illness', 'power, by any means', 'a quiet life, finally', 'to prove a rival wrong', 'the truth behind a friend’s disappearance'],
-  secret: ['is secretly a spy for a rival faction', 'killed someone years ago and was never caught', 'is the heir to a fallen noble house', 'owes a favor to a devil', 'knows the location of a hidden dungeon', 'is a shapechanger in disguise', 'has been stealing from their employer', 'is being blackmailed', 'worships a forbidden god', 'is dying and has told no one', 'once abandoned their adventuring party to die', 'has a twin nobody knows about'],
-  quirk: ['speaks in the third person', 'hums constantly', 'collects teeth', 'answers questions with questions', 'quotes proverbs, often incorrectly', 'never makes eye contact', 'laughs at inappropriate moments', 'rolls a coin across their knuckles', 'whispers everything', 'is painfully formal', 'calls everyone “friend”', 'chews on a pipe they never light'],
-  arche: ['a lich seeking to outlive the gods', 'a charismatic cult leader', 'a usurping regent', 'a dragon hoarding more than gold', 'a hag who trades in memories', 'a merchant prince with a mercenary army', 'a fallen paladin', 'a fey lord bored with mortals', 'an aberration dreaming beneath the city', 'a necromancer grieving a lost love'],
-  vgoal: ['to open a gate to another plane', 'to seize the throne', 'to resurrect someone who should stay dead', 'to become a god', 'to erase a bloodline', 'to plunge the land into eternal winter', 'to control the only source of magic in the land', 'to avenge an ancient betrayal'],
-  vmeth: ['through a network of informants', 'by corrupting the local clergy', 'with an army of the undead', 'through bargains and debts', 'by manipulating the heroes themselves', 'with forbidden rituals at each new moon'],
-  vweak: ['cannot enter holy ground', 'is bound by an ancient oath', 'loves someone who could betray them', 'hid their source of power in plain sight', 'has lieutenants who secretly despise them', 'fears being forgotten more than death'],
-  epithet: ['the Pale', 'the Unbroken', 'of the Ashen Veil', 'the Whisperer', 'the Crowned Wolf', 'the Hollow', 'the Last'],
-  patron: ['A desperate farmer', 'A hooded stranger', 'The local temple', 'A dying knight', 'A guild of merchants', 'A child with a strange map', 'The town council', 'An eccentric wizard', 'A grieving widow', 'A ghost'],
-  task: ['to recover a stolen relic from', 'to investigate disappearances near', 'to escort a mysterious cargo to', 'to clear out the creatures infesting', 'to deliver a sealed letter to', 'to rescue a kidnapped noble from', 'to find out what is poisoning the wells near', 'to negotiate a truce with the folk of'],
-  place: ['the flooded mines', 'the ruined abbey on the hill', 'the Whispering Woods', 'an abandoned lighthouse', 'the old dwarven road', 'a sunken temple', 'the border fortress', 'the sewers beneath the city', 'a village that appears only at night', 'the tomb of a forgotten king'],
-  twist: ['But the patron is lying about why.', 'But a rival adventuring party wants the same thing.', 'But the “monsters” are only defending their home.', 'But the job is a trap set by an old enemy.', 'But what they seek is alive — and doesn’t want to be found.', 'But the local lord forbids anyone from going there.', 'But it must be done before the next full moon.', 'But the reward is cursed.'],
-  tadj: ['Prancing', 'Drunken', 'Gilded', 'Rusty', 'Laughing', 'Sleeping', 'Crooked', 'Salty', 'Wandering', 'Silver', 'One-Eyed', 'Howling'],
-  tnoun: ['Griffon', 'Tankard', 'Dragon', 'Mermaid', 'Goat', 'Lantern', 'Boar', 'Wyvern', 'Owl', 'Anchor', 'Stag', 'Kraken'],
-  tfeat: ['The owner never seems to age.', 'A bard plays the same song every night, and no one knows why.', 'There is a locked cellar door nobody talks about.', 'It is the unofficial headquarters of the thieves’ guild.', 'The notice board overflows with bounties.', 'The house ale has a faint magical shimmer.'],
-  rumor: ['Someone saw lights in the old tower again.', 'The baron’s daughter ran off with a sellsword.', 'Wolves took three sheep last night, and they walked on two legs.', 'A dragon was spotted over the mountains.', 'The priest has been buying an awful lot of lamp oil.', 'There is gold in the river caves, if you can get past what lives there.'],
-  spre: ['Oak', 'Raven', 'Mill', 'Stone', 'Ash', 'Wolf', 'Cold', 'Brook', 'Thorn', 'Salt', 'Iron', 'Frost'],
-  ssuf: ['ford', 'haven', 'hollow', 'reach', 'wick', 'moor', 'gate', 'bury', 'fall', 'stead', 'mere', 'crest'],
-  known: ['its enormous annual fair', 'a miraculous healing spring', 'the finest horses in the realm', 'a haunted bell tower', 'its silver mines', 'a shrine to a forgotten saint', 'exotic spices from overseas', 'an ancient ring of standing stones'],
-  problem: ['wolves have grown bold and clever', 'the mayor has vanished', 'everyone shares the same nightmare', 'the river has turned red', 'bandits control the only road', 'strange lights hover in the hills each night', 'a dragon has been sighted', 'the dead refuse to stay buried'],
-  iobj: ['Ring', 'Cloak', 'Dagger', 'Amulet', 'Lantern', 'Boots', 'Shield', 'Staff', 'Mirror', 'Compass', 'Gauntlets', 'Quill'],
-  iof: ['Whispers', 'the Tides', 'Embers', 'the Hollow Moon', 'Second Chances', 'the Stag', 'Silent Steps', 'Clarity', 'the Deep', 'Warding'],
-  ipow: ['glows faintly when enemies are within 60 feet', 'lets the bearer cast misty step once per day', 'allows speaking with animals for 1 hour, once per day', 'grants advantage on checks to detect lies', 'always points toward the nearest fresh water', 'can store one spell of 3rd level or lower', 'makes the bearer immune to being frightened, but unable to sleep', 'whispers useful (and sometimes useless) advice'],
-  iquirk: ['is always warm to the touch', 'hums when near gold', 'smells of lavender', 'sometimes speaks in its creator’s voice', 'feels heavier when its owner lies'],
-  threat: ['An ancient seal beneath the capital is cracking', 'The sun has not risen in thirteen days', 'A plague of undeath spreads from the northern marshes', 'The last dragon has awoken, furious and grieving', 'Two kingdoms march toward a war engineered by a hidden hand', 'A god has been murdered', 'The Feywild is bleeding into the mortal world', 'A floating city is falling from the sky'],
-  stakes: ['only a forgotten prophecy explains how to stop it', 'the only people who believe it are outcasts and criminals', 'every faction wants to exploit it rather than stop it', 'its cause is tied to one of the heroes’ pasts', 'the heroes may have caused it by accident'],
-  start: ['as prisoners on a ship bound for a penal colony', 'as guests at a wedding that goes terribly wrong', 'as newly hired caravan guards', 'in a village on the edge of the wilds', 'in the aftermath of a disaster that levelled their town', 'as the only witnesses to a murder'],
-  comp: ['A sudden storm forces the party to take shelter somewhere unfamiliar.', 'An old enemy arrives with a proposition.', 'A trusted NPC is revealed to be a traitor.', 'The party’s gear is stolen in the night.', 'A rival group reaches the goal first.', 'A bystander is caught in the crossfire.', 'The bridge, road or tunnel ahead collapses.', 'A message arrives: someone the party cares about is in danger.', 'The authorities mistake the party for criminals.', 'A creature follows the party, watching but never attacking.'],
-};
-const GENS = {
-  npc: { title: 'NPC', icon: '🎭', make() {
-    const race = pick(RACES), name = nameFor(race), role = pick(T_.occ), look = pick(T_.look), pers = pick(T_.pers), want = pick(T_.want), secret = pick(T_.secret), quirk = pick(T_.quirk);
-    return { title: name, rows: [['Who', `${race} ${role}`], ['Look', look], ['Manner', `${pers}; ${quirk}`], ['Wants', want], ['Secret', secret]],
-      save: { type: 'npcs', data: { name, race, role: cap(role), appearance: cap(look) + '.', personality: `${cap(pers)}. ${cap(quirk)}.`, motivation: cap(want) + '.', secret: cap(secret) + '.', attitude: 'Neutral', status: 'Alive' } } };
-  } },
-  villain: { title: 'Villain', icon: '💀', make() {
-    const race = pick(RACES), name = `${nameFor(race).split(' ')[0]} ${pick(T_.epithet)}`, a = pick(T_.arche), g = pick(T_.vgoal), m = pick(T_.vmeth), w = pick(T_.vweak);
-    return { title: name, rows: [['Is', a], ['Wants', g], ['Methods', m], ['Weakness', w]],
-      save: { type: 'npcs', data: { name, role: cap(a), motivation: `${cap(g)}, ${m}.`, secret: `Weakness: ${w}.`, attitude: 'Hostile', status: 'Alive', tags: ['villain'] } } };
-  } },
-  hook: { title: 'Plot hook', icon: '📜', make() {
-    const p = pick(T_.patron), t = pick(T_.task), pl = pick(T_.place), tw = pick(T_.twist);
-    const hook = `${p} asks the party ${t} ${pl}.`;
-    const title = cap(pl.replace(/^(the|an|a) /, ''));
-    return { title, text: `${hook} ${tw}`,
-      save: { type: 'quests', data: { name: title, hook, complications: tw, status: 'Idea', kind: 'Side', giver: p.replace(/^(A|An|The) /, '') } } };
-  } },
-  tavern: { title: 'Tavern', icon: '🍺', make() {
-    const name = `The ${pick(T_.tadj)} ${pick(T_.tnoun)}`, f = pick(T_.tfeat), r = pick(T_.rumor);
-    return { title: name, rows: [['Notable', f], ['Rumor', r]],
-      save: { type: 'locations', data: { name, kind: 'Tavern / Shop', features: f, secrets: `Rumor overheard: ${r}` } } };
-  } },
-  settlement: { title: 'Settlement', icon: '🏘️', make() {
-    const name = pick(T_.spre) + pick(T_.ssuf), size = pick(['Village', 'Village', 'Town', 'Town', 'City']), k = pick(T_.known), p = pick(T_.problem);
-    return { title: name, rows: [['Size', size], ['Known for', k], ['Trouble', `Lately, ${p}.`]],
-      save: { type: 'locations', data: { name, kind: size, description: `A ${size.toLowerCase()} known for ${k}.`, secrets: `Lately, ${p}.` } } };
-  } },
-  item: { title: 'Magic item', icon: '💎', make() {
-    const name = `${pick(T_.iobj)} of ${pick(T_.iof)}`, pow = pick(T_.ipow), q = pick(T_.iquirk), rarity = pick(['Common', 'Uncommon', 'Uncommon', 'Rare', 'Rare', 'Very Rare']);
-    return { title: name, rows: [['Rarity', rarity], ['Power', `It ${pow}.`], ['Quirk', `It ${q}.`]],
-      save: { type: 'items', data: { name, rarity, description: `It ${pow}. It ${q}.`, kind: 'Wondrous item' } } };
-  } },
-  premise: { title: 'Campaign premise', icon: '✦', make() {
-    const text = `${pick(T_.threat)}, and ${pick(T_.stakes)}. The heroes begin ${pick(T_.start)}.`;
-    return { title: 'Premise', text, save: { type: 'pitch', data: text } };
-  } },
-  complication: { title: 'Complication', icon: '⚡', make() { return { title: 'Complication', text: pick(T_.comp) }; } },
-};
-const genResults = {};
 function genHTML(key) {
   const r = genResults[key];
-  if (!r) return '<p class="blurb">Press generate for an idea.</p>';
-  return `<div class="gen-title">${esc(r.title)}</div>${r.text ? `<p style="margin:0">${esc(r.text)}</p>` : ''}${r.rows ? `<dl>${r.rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}`;
+  if (!r) return `<p class="blurb">${GENS[key].blurb ? esc(GENS[key].blurb) : 'Press generate for an idea.'}</p>`;
+  return `<div class="gen-title">${esc(r.title)}</div>${r.text ? `<p style="margin:0">${esc(r.text)}</p>` : ''}
+    ${r.rows ? `<dl>${r.rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
+    ${(r.sections || []).map(([h, list]) => `<div class="gen-sec"><div class="kicker">${esc(h)}</div><ol>${list.map(x => `<li>${esc(x)}</li>`).join('')}</ol></div>`).join('')}`;
+}
+function genButtons(key) {
+  const r = genResults[key];
+  return `<button class="btn small primary" data-gen="${key}">${r ? 'Generate again' : 'Generate'}</button>
+    ${(r?.saves || []).map((sv, i) => `<button class="btn small" data-gensave="${key}" data-si="${i}" ${sv.note ? `title="Creates: ${esc(sv.note)}"` : ''}>${esc(sv.label)}</button>`).join('')}`;
 }
 
 /* ---------- Tools page ---------- */
@@ -913,15 +888,111 @@ function renderTools() {
       <div class="roll-out" id="rollOut"><div class="roll-detail">Pick a die or type an expression.</div></div>
       <ul class="history" id="history"></ul>
     </div>
-    <div><h2 style="margin-bottom:12px">✦ Generators</h2>
-      <div class="gens">${Object.entries(GENS).map(([k, g]) => `<div class="card">
-        <h3>${g.icon} ${g.title}</h3>
+    <div><div class="gen-head"><h2>✦ Generators</h2>
+        <label class="gen-culture">Culture <select id="genCulture" aria-label="Culture for names and places">
+          <option value="any" ${genCulture === 'any' ? 'selected' : ''}>Any (mix them)</option>
+          ${Object.entries(GEN.cultures).map(([k, c]) => `<option value="${k}" ${genCulture === k ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}
+        </select></label></div>
+      <p class="blurb" style="margin:-4px 0 12px">The culture sets names and places, and which Codex traditions adventures draw from. Adventures and adventurers use your party’s average level.</p>
+      <div class="gens">${Object.entries(GENS).map(([k, g]) => `<div class="card ${g.wide ? 'gen-wide' : ''}">
+        <div class="gen-card-head"><h3>${g.icon} ${g.title}</h3>
+          ${g.opts ? `<select class="gen-opt" data-genopt="${k}" aria-label="${esc(g.opts.label)}">${g.opts.choices.map(([v, l]) => `<option value="${v}" ${genOpts[k] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>` : ''}</div>
         <div class="gen-out" id="gen-${k}">${genHTML(k)}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small primary" data-gen="${k}">Generate</button>
-        ${k === 'complication' ? '' : `<button class="btn small" data-gensave="${k}" ${genResults[k] ? '' : 'disabled'}>${k === 'premise' ? 'Use as campaign pitch' : 'Save to campaign'}</button>`}</div>
-      </div>`).join('')}</div></div>
+        <div class="gen-btns" id="genb-${k}">${genButtons(k)}</div>
+      </div>`).join('')}
+      <div class="card"><h3>📚 Draw from the Mythic Codex</h3>
+        <p class="blurb" style="margin:8px 0 10px">Hand-written ideas from the world’s epics and philosophers.</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">${Object.entries(CX.categories).map(([k, cat]) => `<button class="btn small" data-act="cxDraw" data-cat="${k}">${cat.icon} ${cat.one}</button>`).join('')}</div>
+      </div></div></div>
   </div>`;
   renderDice();
+}
+
+/* =========================================================
+   Mythic Codex
+   ========================================================= */
+const CX = window.CODEX || { traditions: {}, categories: {}, entries: [] };
+const cxRecent = [];
+function cxFiltered(cat, trad, q = '') {
+  q = q.trim().toLowerCase();
+  return CX.entries.filter(e => (!cat || e.c === cat) && (!trad || e.t.includes(trad))
+    && (!q || Object.values(e).join(' ').toLowerCase().includes(q)));
+}
+// Random pick that avoids repeating anything drawn recently.
+function drawCodex(cat, trad = '') {
+  const pool = cxFiltered(cat, trad);
+  if (!pool.length) return null;
+  const fresh = pool.filter(e => !cxRecent.includes(e));
+  const e = pick(fresh.length ? fresh : pool);
+  cxRecent.push(e); if (cxRecent.length > Math.min(12, pool.length - 1)) cxRecent.shift();
+  return e;
+}
+function cxCard(e, drawn) {
+  const cat = CX.categories[e.c], i = CX.entries.indexOf(e);
+  const mons = (e.monsters || []).map(m => `${m.count}× ${m.name} (CR ${m.cr})`).join(', ');
+  return `<article class="card cx-card ${drawn ? 'cx-drawn' : ''}">
+    <div class="cx-top"><span class="kicker">${cat.icon} ${cat.one}</span>
+      <span class="cx-trads">${e.t.map(t => `<span class="badge tone-gold" title="${esc(CX.traditions[t].label)}">${CX.traditions[t].icon} ${esc(CX.traditions[t].label)}</span>`).join('')}</span></div>
+    <h3 class="cx-name">${esc(e.name)}</h3>
+    <div class="cx-src">${esc(e.src)}</div>
+    <dl class="cx-dl">${cat.fields.filter(([k]) => e[k]).map(([k, l]) => `<dt>${l}</dt><dd>${esc(e[k])}</dd>`).join('')}
+      ${mons ? `<dt>Encounter</dt><dd>${esc(mons)}</dd>` : ''}</dl>
+    <div class="cx-actions"><button class="btn small primary" data-act="cxSave" data-i="${i}">${e.c === 'premise' ? 'Use for this campaign' : `Add to ${CX_TARGET[e.c]}`}</button></div>
+  </article>`;
+}
+const CX_TARGET = { premise: 'Overview', journey: 'Quests', villain: 'NPCs', monster: 'Encounters', god: 'NPCs', sage: 'NPCs', dilemma: 'Encounters', riddle: 'Encounters', hook: 'Quests', relic: 'Items' };
+function renderCodex() {
+  const x = view.cx, counts = {};
+  cxFiltered('', x.trad).forEach(e => counts[e.c] = (counts[e.c] || 0) + 1);
+  const cat = CX.categories[x.cat];
+  main.innerHTML = `<div class="cx-head">
+      <div><h1>📚 Mythic Codex</h1>
+        <p class="blurb" style="max-width:760px">Campaign material drawn from the Mahabharata, the Shahnameh, Gilgamesh, the Odyssey, the Norse sagas, Buddhist and Taoist thought, and Western philosophy. Every entry names its source. Several of these traditions are living religions, so their gods and teachers appear here with respect.</p></div>
+    </div>
+    <div class="cx-bar">
+      <div class="tagbar">${Object.entries(CX.categories).map(([k, c]) => `<button class="chip ${x.cat === k ? 'on' : ''}" data-act="cxCat" data-cat="${k}">${c.icon} ${c.label} <span class="cx-count">${counts[k] || 0}</span></button>`).join('')}</div>
+      <div class="tagbar">${Object.entries(CX.traditions).map(([k, t]) => `<button class="chip ${x.trad === k ? 'on' : ''}" data-act="cxTrad" data-trad="${k}">${t.icon} ${t.label}</button>`).join('')}</div>
+      <div class="cx-tools"><input type="search" class="input" id="cxSearch" placeholder="Search the codex…" value="${esc(x.q)}">
+        <button class="btn primary" data-act="cxDraw">🎲 Draw a random ${cat.one.toLowerCase()}</button></div>
+    </div>
+    <p class="blurb" style="margin:14px 0">${cat.blurb}</p>
+    <div id="cxDrawn"></div>
+    <div class="cx-grid" id="cxCards"></div>`;
+  renderCodexCards();
+}
+function renderCodexCards() {
+  const x = view.cx, drawn = x.drawn != null ? CX.entries[x.drawn] : null;
+  $('#cxDrawn').innerHTML = drawn ? `<div class="cx-drawn-wrap"><div class="kicker" style="margin-bottom:8px">🎲 Drawn for you</div>${cxCard(drawn, true)}</div>` : '';
+  const list = cxFiltered(x.cat, x.trad, x.q).filter(e => e !== drawn);
+  $('#cxCards').innerHTML = list.length ? list.map(e => cxCard(e)).join('') : (drawn ? '' : '<div class="empty">Nothing matches. Try another tradition or clear the search.</div>');
+}
+function applyPremise(c, e) {
+  const o = c.overview;
+  Object.assign(o, { pitch: e.pitch, themes: e.themes, tone: e.tone, villain: e.villain, villainGoal: e.villainGoal });
+  o.notes = [`Central question: ${e.question}`, `Arc: ${e.acts}`, `Inspired by: ${e.src}`, o.notes].filter(Boolean).join('\n\n');
+  touch(c);
+}
+async function saveCodex(c, e) {
+  const tags = [...e.t];
+  const src = `Source: ${e.src}`;
+  let type, data;
+  switch (e.c) {
+    case 'premise':
+      if ((c.overview.pitch || '').trim() && !(await ask({ title: `Use “${e.name}”?`, message: 'This replaces your pitch, themes, tone and villain. Your notes are kept.', ok: 'Use this premise' }))) return;
+      applyPremise(c, e); toast(`“${e.name}” is now your campaign premise`); return go('overview');
+    case 'journey': type = 'quests'; data = { kind: 'Personal', status: 'Idea', hook: e.trigger, objectives: e.trial, complications: e.paths, reward: e.mark, notes: `${e.thinker}: ${e.idea}\n\n${src}` }; break;
+    case 'villain': type = 'npcs'; data = { role: e.role, attitude: 'Hostile', status: 'Alive', motivation: e.worldview, personality: `First sign: ${e.tell}`, secret: e.flaw, notes: `What they get right: ${e.truth}\n\nRedemption: ${e.redemption}\n\n${src}`, tags: [...tags, 'villain'] }; break;
+    case 'monster': type = 'encounters'; data = { kind: 'Combat', monsters: structuredClone(e.monsters || []), setup: e.lair, tactics: e.tactics, notes: `${e.lore}\n\nWhat it embodies: ${e.meaning}\n\n5e stats: ${e.stats}\n\nAnother way: ${e.mercy}\n\n${src}` }; break;
+    case 'god': type = 'npcs'; data = { role: `Deity: ${e.domain}`, attitude: 'Neutral', status: 'Alive', motivation: e.wants, personality: `Omen: ${e.omen}`, secret: `Price: ${e.price}`, notes: `Boon: ${e.boon}\n\nCleric domains: ${e.domains}\n\n${src}`, tags: [...tags, 'god'] }; break;
+    case 'sage': type = 'npcs'; data = { role: e.role, attitude: 'Friendly', status: 'Alive', personality: `Teaching: ${e.teaching}`, motivation: `Test: ${e.test}`, secret: e.flaw, notes: `Gift: ${e.gift}\n\n${src}`, tags: [...tags, 'mentor'] }; break;
+    case 'dilemma': type = 'encounters'; data = { kind: 'Social', monsters: [], setup: e.situation, tactics: `Stakes: ${e.stakes}`, notes: `Lenses: ${e.lenses}\n\nOutcomes: ${e.outcomes}\n\n${src}` }; break;
+    case 'riddle': type = 'encounters'; data = { kind: 'Trap / Puzzle', monsters: [], setup: `${e.setup}\n\nThe question: ${e.riddle}`, tactics: `Answers: ${e.answers}`, notes: `Outcome: ${e.outcome}\n\n${src}` }; break;
+    case 'hook': type = 'quests'; data = { kind: 'Main', status: 'Idea', hook: e.hook, objectives: `The truth: ${e.truth}`, complications: e.twist, reward: e.reward, notes: src }; break;
+    case 'relic': type = 'items'; data = { rarity: e.rarity, kind: e.kind || 'Wondrous item', attune: !!e.attune, description: e.power, notes: `${e.lore}\n\nPrice: ${e.price}\n\n${src}` }; break;
+  }
+  data.name = e.name; data.tags ||= tags;
+  const made = createEntity(type, data);
+  renderNav(); toast(`Added “${made.name}” to ${TYPES[type].label}`);
 }
 
 /* =========================================================
@@ -935,8 +1006,8 @@ function createEntity(type, data = {}) {
   c.entities[type].push(e); touch(c);
   return e;
 }
-function newCampaignPrompt() {
-  const name = prompt('Name your campaign:', 'My new campaign');
+async function newCampaignPrompt() {
+  const name = await ask({ title: 'Start a new campaign', message: 'What should it be called? You can change this later.', input: 'My new campaign', ok: 'Create campaign' });
   if (name === null) return;
   addCampaign({ id: uid(), name: name.trim() || 'Untitled campaign', created: Date.now() });
   go('overview'); render();
@@ -971,7 +1042,7 @@ function toMarkdown(c) {
   return md.replace(/\[\[([^\]]+)\]\]/g, '$1');
 }
 
-document.addEventListener('click', ev => {
+document.addEventListener('click', async ev => {
   const t = ev.target.closest('[data-act],[data-roll],[data-gen],[data-gensave],[data-menu]');
   if (!t) {
     if (!ev.target.closest('#menu')) $('#menu').open = false;
@@ -981,19 +1052,17 @@ document.addEventListener('click', ev => {
   const c = camp();
   if (t.dataset.roll) return doRoll(t.dataset.roll);
   if (t.dataset.gen) {
-    const k = t.dataset.gen; genResults[k] = GENS[k].make();
+    const k = t.dataset.gen; genResults[k] = GENS[k].make(genContext(k));
     $(`#gen-${k}`).innerHTML = genHTML(k);
-    const sb = document.querySelector(`[data-gensave="${k}"]`); if (sb) sb.disabled = false;
+    $(`#genb-${k}`).innerHTML = genButtons(k);
     return;
   }
   if (t.dataset.gensave) {
-    const r = genResults[t.dataset.gensave]; if (!r?.save) return;
-    if (r.save.type === 'pitch') {
-      if (c.overview.pitch && !confirm('Replace your current campaign pitch?')) return;
-      c.overview.pitch = r.save.data; touch(c); toast('Pitch saved to your overview'); return;
-    }
-    const e = createEntity(r.save.type, structuredClone(r.save.data));
-    renderNav(); toast(`Saved “${e.name}” to ${TYPES[r.save.type].label}`);
+    const sv = genResults[t.dataset.gensave]?.saves?.[+t.dataset.si]; if (!sv || !c) return;
+    const made = sv.items.map(it => ({ type: it.type, e: createEntity(it.type, structuredClone(it.data)) }));
+    renderNav();
+    toast(made.length === 1 ? `Added “${made[0].e.name}” to ${TYPES[made[0].type].label}` : `Added ${made.length} records: ${[...new Set(made.map(m => TYPES[m.type].label))].join(', ')}`);
+    t.disabled = true; t.textContent = '✓ Saved';
     return;
   }
   if (t.dataset.menu) {
@@ -1007,7 +1076,7 @@ document.addEventListener('click', ev => {
     else if (m === 'exportJson') download(`${slug(c.name)}.json`, JSON.stringify(c, null, 2), 'application/json');
     else if (m === 'exportMd') download(`${slug(c.name)}.md`, toMarkdown(c), 'text/markdown');
     else if (m === 'delete') {
-      if (!confirm(`Delete “${c.name}” and everything in it? This cannot be undone.\n\nTip: export a JSON backup first.`)) return;
+      if (!(await ask({ title: `Delete “${c.name}”?`, message: 'Everything in this campaign will be deleted. This cannot be undone.\n\nTip: export a JSON backup first (⋯ menu).', ok: 'Delete campaign', danger: true }))) return;
       db.campaigns = db.campaigns.filter(x => x.id !== c.id); db.currentId = db.campaigns[0]?.id ?? null; save(); go('overview'); render();
     }
     return;
@@ -1026,7 +1095,7 @@ document.addEventListener('click', ev => {
       c.entities[view.section].push(copy); touch(c); return go(view.section, copy.id);
     }
     case 'del': {
-      const e = currentEnt(); if (!e || !confirm(`Delete “${e.name}”?`)) return;
+      const e = currentEnt(); if (!e || !(await ask({ title: `Delete “${e.name}”?`, message: 'This cannot be undone.', ok: 'Delete', danger: true }))) return;
       c.entities[view.section] = c.entities[view.section].filter(x => x.id !== e.id); touch(c); return go(view.section);
     }
     case 'tag': view.tag = view.tag === t.dataset.tag ? null : t.dataset.tag; return renderList(c, view.section);
@@ -1034,10 +1103,20 @@ document.addEventListener('click', ev => {
     case 'delMonster': { const e = currentEnt(); e.monsters.splice(+t.dataset.i, 1); touch(c); renderEditor(c, 'encounters', e); return renderList(c, 'encounters'); }
     case 'stats': return rollStats();
     case 'inspire': {
-      const text = GENS.premise.make().text;
-      if (c.overview.pitch?.trim() && !confirm(`Replace your pitch with this idea?\n\n${text}`)) return;
-      c.overview.pitch = text; touch(c); return renderOverview(c);
+      const e = drawCodex('premise');
+      if (!(await ask({ title: e.name, message: `${e.pitch}\n\nCentral question: ${e.question}\n\nUse this premise? It fills in your pitch, themes, tone and villain. Your notes are kept.`, ok: 'Use this premise' }))) return;
+      applyPremise(c, e); return renderOverview(c);
     }
+    case 'cxCat': view.cx.cat = t.dataset.cat; view.cx.drawn = null; return renderCodex(c);
+    case 'cxTrad': view.cx.trad = view.cx.trad === t.dataset.trad ? '' : t.dataset.trad; view.cx.drawn = null; return renderCodex(c);
+    case 'cxDraw': {
+      if (t.dataset.cat) view.cx.cat = t.dataset.cat;
+      const e = drawCodex(view.cx.cat, view.cx.trad);
+      view.cx.drawn = e ? CX.entries.indexOf(e) : null;
+      if (view.section !== 'codex') return go('codex');
+      renderCodex(c); return window.scrollTo(0, 0);
+    }
+    case 'cxSave': return saveCodex(c, CX.entries[+t.dataset.i]);
     case 'mkVillain': { const e = createEntity('npcs', { name: c.overview.villain.trim(), attitude: 'Hostile', motivation: c.overview.villainGoal || '', tags: ['villain'] }); return go('npcs', e.id); }
   }
 });
@@ -1045,6 +1124,7 @@ document.addEventListener('click', ev => {
 main.addEventListener('input', ev => {
   const t = ev.target, c = camp(); if (!c) return;
   if (t.id === 'listSearch') { view.filter = t.value; return renderList(c, view.section); }
+  if (t.id === 'cxSearch') { view.cx.q = t.value; view.cx.drawn = null; return renderCodexCards(); }
   if (t.tagName === 'TEXTAREA') autosize(t);
   if (t.dataset.ov) {
     if (t.dataset.ov === '__name') { c.name = t.value; renderTop(); }
@@ -1066,6 +1146,8 @@ main.addEventListener('input', ev => {
 });
 main.addEventListener('change', ev => {
   const t = ev.target, c = camp(); if (!c) return;
+  if (t.id === 'genCulture') { genCulture = t.value; return; }
+  if (t.dataset.genopt) { genOpts[t.dataset.genopt] = t.value; return; }
   if (t.dataset.act === 'createMention' && t.value) {
     const type = t.value, name = t.dataset.name;
     const e = createEntity(type, { name });
@@ -1105,6 +1187,34 @@ $('#importFile').addEventListener('change', async ev => {
 function autosize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight + 2, 600) + 'px'; }
 function autosizeAll() { main.querySelectorAll('textarea').forEach(autosize); }
 function fmtDate(d) { const dt = new Date(d + 'T00:00:00'); return isNaN(dt) ? d : dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); }
+// In-app dialog. Browser prompt()/confirm() are silently blocked in many in-app and mobile browsers.
+// Resolves to the typed text (input dialogs), true (confirm), or null when cancelled.
+function ask({ title, message = '', input = null, ok = 'OK', danger = false }) {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.className = 'modal-back';
+    back.innerHTML = `<div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">${esc(title)}</h2>
+      ${message ? `<p class="modal-msg">${esc(message)}</p>` : ''}
+      ${input !== null ? `<input type="text" class="input" id="modalInput" value="${esc(input)}" aria-label="${esc(title)}">` : ''}
+      <div class="modal-btns"><button class="btn ghost" data-modal="cancel">Cancel</button>
+        <button class="btn primary ${danger ? 'modal-danger' : ''}" data-modal="ok">${esc(ok)}</button></div></div>`;
+    const done = val => { back.remove(); document.removeEventListener('keydown', onKey, true); resolve(val); };
+    const okVal = () => input !== null ? back.querySelector('#modalInput').value : true;
+    const onKey = e => {
+      if (e.key === 'Escape') { e.preventDefault(); done(null); }
+      else if (e.key === 'Enter' && (input !== null || e.target === back.querySelector('[data-modal=ok]'))) { e.preventDefault(); done(okVal()); }
+    };
+    back.addEventListener('click', e => {
+      if (e.target === back || e.target.closest('[data-modal=cancel]')) done(null);
+      else if (e.target.closest('[data-modal=ok]')) done(okVal());
+    });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(back);
+    const field = back.querySelector('#modalInput');
+    if (field) { field.focus(); field.select(); } else back.querySelector('[data-modal=ok]').focus();
+  });
+}
 let toastTimer;
 function toast(msg) {
   let el = $('.toast'); if (!el) { el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
